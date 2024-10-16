@@ -48,8 +48,8 @@ def main():
     matPath = f"./dataGenerator/{dataFolder}/{dataType}/img.mat"
     configPath = f"./dataGenerator/{dataFolder}/{dataType}/config_256.yml"
     outputPath = osp.join(outputFolder, f"{outputName}.pickle")
+    multi_gen('./data/', configPath, dataFolder, outputPath, dataType, show=True)
 
-    #generator(matPath, configPath, outputPath, dataFolder, dataType, True)
 
 
 # %% Geometry
@@ -135,7 +135,7 @@ def loadImage(dirname, nVoxels, convert, rescale_slope, rescale_intercept, norma
 
 
     # Loads data in F_CONTIGUOUS MODE (column major), convert to Row major
-    image_ori = test_data["img"].astype(np.float32)
+    image_ori = test_data.astype(np.float32)
     if convert:
         print("Convert from HU to attenuation")
         image = convert_to_attenuation(image_ori, rescale_slope, rescale_intercept)
@@ -170,11 +170,13 @@ def loadImage(dirname, nVoxels, convert, rescale_slope, rescale_intercept, norma
 
 def multi_gen(dir_path, configPath,dataFolder,outputPath,dataType, show=False):
     data_list = []
+    index = 0
     for file in os.listdir(dir_path):
         if file.endswith("mhd"):
             matPath = os.path.join(dir_path, file)
-            data = generator(matPath, configPath, outputPath, dataFolder, dataType, show)
+            data = generator(matPath, configPath, outputPath, dataFolder, dataType, index,show)
             data_list.append(data)
+            index += 1
 
     with open(outputPath, "wb") as handle:
         pickle.dump(data_list, handle, pickle.HIGHEST_PROTOCOL)
@@ -183,7 +185,7 @@ def multi_gen(dir_path, configPath,dataFolder,outputPath,dataType, show=False):
 
 
 
-def generator(matPath, configPath, outputPath, dataFolder, dataType, show=False):
+def generator(matPath, configPath, outputPath, dataFolder, dataType, index_num,show=False):
     """
     Generate projections given CT image and configuration.
 
@@ -197,6 +199,7 @@ def generator(matPath, configPath, outputPath, dataFolder, dataType, show=False)
     geo = ConeGeometry_special(data)
     img = loadImage(matPath, data["nVoxel"], data["convert"],
                     data["rescale_slope"], data["rescale_intercept"], data["normalize"])
+    img = np.transpose(img, (2, 1, 0))
     data["image"] = img.copy()
 
     # plt.figure()
@@ -208,7 +211,7 @@ def generator(matPath, configPath, outputPath, dataFolder, dataType, show=False)
         data["train"] = {"angles": np.linspace(0, data["totalAngle"] / 180 * np.pi, data["numTrain"]+1)[:-1] + data["startAngle"]/ 180 * np.pi}
     else:
         data["train"] = {"angles": np.sort(np.random.rand(data["numTrain"]) * data["totalAngle"] / 180 * np.pi) + data["startAngle"]/ 180 * np.pi}
-    projections = tigre.Ax(np.transpose(img, (2, 1, 0)).copy(), geo, data["train"]["angles"])[:, ::-1, :]
+    projections = tigre.Ax(np.transpose(img, (2,1,0)).copy(), geo, data["train"]["angles"])[:, ::-1, :]
     if data["noise"] != 0 and data["normalize"]:
         print("Add noise to projections")
         noise_projections = CTnoise.add(projections, Poisson=1e5, Gaussian=np.array([0, data["noise"]]))
@@ -249,14 +252,14 @@ def generator(matPath, configPath, outputPath, dataFolder, dataType, show=False)
         show_dir_vali_proj  = data["val"]["projections"][::show_step,...]
         # show_image = np.concatenate(show_image, axis=0)
 
-        stx()
+        #stx()
 
         for i in range(show_num):
-            iio.imwrite(save_dir_train_ct+'CT_'+str(i)+'.png', (show_image_train_ct[...,i]*255).astype(np.uint8))
-            iio.imwrite(save_dir_train_proj+'projs_'+str(i)+'.png', (show_dir_train_proj[i,...]*255).astype(np.uint8))
-            iio.imwrite(save_dir_vali_proj+'projs_'+str(i)+'.png', (show_dir_vali_proj[i,...]*255).astype(np.uint8))
+            iio.imwrite(save_dir_train_ct+f'CT_{index_num}_'+str(i)+'.png', (show_image_train_ct[...,i]*255/show_image_train_ct.max()).astype(np.uint8))
+            iio.imwrite(save_dir_train_proj+f'projs_{index_num}_'+str(i)+'.png', (show_dir_train_proj[i,...]*255/show_dir_train_proj.max()).astype(np.uint8))
+            iio.imwrite(save_dir_vali_proj+f'projs_{index_num}_'+str(i)+'.png', (show_dir_vali_proj[i,...]*255/show_dir_vali_proj.max()).astype(np.uint8))
 
-        stx()
+        #stx()
         # print("Save ct image")
         # tigre.plotimg(img.transpose((2,0,1)), dim="z")
         # print("Save training images")
@@ -266,8 +269,8 @@ def generator(matPath, configPath, outputPath, dataFolder, dataType, show=False)
 
     # Save data
     os.makedirs(osp.dirname(outputPath), exist_ok=True)
-    #with open(outputPath, "wb") as handle:
-    #    pickle.dump(data, handle, pickle.HIGHEST_PROTOCOL)
+    with open('./test.pickle', "wb") as handle:
+        pickle.dump(data, handle, pickle.HIGHEST_PROTOCOL)
 
     #print(f"Save files in {outputPath}")
     return data

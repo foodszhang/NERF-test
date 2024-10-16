@@ -10,17 +10,17 @@ import argparse
 def config_parser():
     parser = argparse.ArgumentParser()
     # parser.add_argument("--config", default=f"./config/nerf/chest_50.yaml", help="configs file path")
-    parser.add_argument("--config", default=f"./config/tensorf/chest_50.yaml", help="configs file path")
+    parser.add_argument("--config", default=f"./config/Lineformer/luna16_50.yaml", help="configs file path")
     parser.add_argument("--gpu_id", default="0", help="gpu to use")
     return parser
 
 parser = config_parser()
 args = parser.parse_args()
-print('!!!!!!', torch.cuda.is_available)
+print('!!!!!!', torch.cuda.is_available())
 
 #os.environ["CUDA_DEVICE_ORDER"] = 'PCI_BUS_ID'
-os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
-os.environ["CUDA_HOME"]='C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.3'
+#os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
+#os.environ["CUDA_HOME"]='C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.3'
 
 from src.config.configloading import load_config
 from src.render import render, run_network

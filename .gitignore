@@ -1,4 +1,7 @@
 logs/
-data
+data/
 __pycache__/
+*.pickle
+
+
 
