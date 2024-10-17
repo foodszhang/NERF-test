@@ -2,9 +2,9 @@ exp:
   expname: luna16_50
   expdir: ./logs/Lineformer/
     #datadir: ./data/luna16_50_256.pickle
-  train_datadir: ./data/luna16_50_5_train.pickle
-  eval_datadir: ./data/luna16_50_5_eval.pickle
-    #datadir: ./data/luna16_50.pickle
+    #train_datadir: ./data/luna16_17_5_train.pickle
+    #eval_datadir: ./data/luna16_17_5_eval.pickle
+  datadir: ./data/luna16_50.pickle
     #network:
     #  net_type: Lineformer
     #  net_type: mlp
@@ -19,13 +19,6 @@ exp:
     #  heads: 8
     #  num_blocks: 1
 network:
-  #net_type: mlp
-  #num_layers: 4
-  #hidden_dim: 128
-  #skips: [4]
-  #out_dim: 1
-  #last_activation: relu
-  #bound: 0.3
   net_type: mlp
   num_layers: 4
   hidden_dim: 128
@@ -54,7 +47,7 @@ render:
   raw_noise_std: 0.
   netchunk: 409600  # batchsize of points
 train:
-  epoch: 200
+  epoch: 400
   n_batch: 1
   n_rays: 512
   lrate: 0.001

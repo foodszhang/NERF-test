@@ -10,7 +10,7 @@ import argparse
 def config_parser():
     parser = argparse.ArgumentParser()
     # parser.add_argument("--config", default=f"./config/nerf/chest_50.yaml", help="configs file path")
-    parser.add_argument("--config", default=f"./config/Lineformer/luna16_50.yaml", help="configs file path")
+    parser.add_argument("--config", default=f"./config/Lineformer/luna16_50_simple.yaml", help="configs file path")
     parser.add_argument("--gpu_id", default="0", help="gpu to use")
     return parser
 

@@ -53,12 +53,17 @@ class MultiTIGREDataset(Dataset):
         with open(path, "rb") as handle:
             all_data = pickle.load(handle)
             # stx()
-        
-        self.geo = ConeGeometry(data) # 把数据处理成ConeGeometry
+        self.geo = ConeGeometry(all_data[0]) # 把数据处理成ConeGeometry
         self.type = type
         self.n_rays = n_rays
         self.near, self.far = self.get_near_far(self.geo)
         self.data = []
+        ####TODO: 这里先用统一的numTrain
+        if self.type == "train":
+            self.n_samples = all_data[0]["numTrain"]
+        else:
+            self.n_samples = all_data[0]["numVal"]
+
 
         if type == "train":
             coords = torch.stack(torch.meshgrid(torch.linspace(0, self.geo.nDetector[1] - 1, self.geo.nDetector[1], device=device), torch.linspace(0, self.geo.nDetector[0] - 1, self.geo.nDetector[0], device=device), indexing="ij"),
@@ -85,8 +90,9 @@ class MultiTIGREDataset(Dataset):
         elif type == "val":
             for i, data in enumerate(all_data):
                 self.data.append({})
-                self.data[i]['projs']= torch.tensor(data["train"]["projections"], dtype=torch.float32, device=device) # [50, 256, 256]
+                self.data[i]['projs']= torch.tensor(data["val"]["projections"], dtype=torch.float32, device=device) # [50, 256, 256]
                 angles = data["val"]["angles"]
+                print('123123123123', data['val']['projections'].shape)
                 rays = self.get_rays(angles, self.geo, device)
                 self.data[i]['rays'] = torch.cat([rays, torch.ones_like(rays[...,:1])*self.near, torch.ones_like(rays[...,:1])*self.far], dim=-1)
                 self.data[i]['image'] = torch.tensor(data["image"], dtype=torch.float32, device=device)
@@ -94,9 +100,15 @@ class MultiTIGREDataset(Dataset):
             # stx()
         
     def __len__(self):
-        return len(self.data)
+        if self.type == "train":
+            return len(self.data) * self.n_samples
+        else:
+            return len(self.data)
 
     def __getitem__(self, index):
+        num_of_sample = index // self.n_samples
+        proj_num = index % self.n_samples
+        d = self.data[num_of_sample]
         if self.type == "train":
             # stx()
             '''
@@ -105,36 +117,30 @@ class MultiTIGREDataset(Dataset):
                 self.projs 是 data 里面的投影数据
                 如果不flatten, 直接用projs_valid 来取rays和projs会怎么样呢？
             '''
-            d = self.data[index]
             outs = []
-            for i in range(d['projs'].shape[0]):
+            projs_valid = (d['projs'][proj_num]>0).flatten()   
+            coords_valid = d['coords'][projs_valid] # [65536, 2] -> [40653, 2], 将布尔值矩阵当做索引，可能是因为并不是所有的
+            select_inds = np.random.choice(coords_valid.shape[0], size=[self.n_rays], replace=False) # 从 0 ~ 40653-1 中选取 1024 个值
+            select_coords = coords_valid[select_inds].long()                    # 根据选取的索引值来取坐标
+            rays = d['rays'][proj_num, select_coords[:, 0], select_coords[:, 1]]   # self.rays: [50, 256, 256, 6], index 决定了取哪一个角度或样例，后两项决定了横纵坐标
+            projs = d['projs'][proj_num, select_coords[:, 0], select_coords[:, 1]]
 
-                projs_valid = (d['projs'][i]>0).flatten()   
-                coords_valid = d['coords'][projs_valid] # [65536, 2] -> [40653, 2], 将布尔值矩阵当做索引，可能是因为并不是所有的
-                select_inds = np.random.choice(coords_valid.shape[0], size=[self.n_rays], replace=False) # 从 0 ~ 40653-1 中选取 1024 个值
-                select_coords = coords_valid[select_inds].long()                    # 根据选取的索引值来取坐标
-                rays = d['rays'][i, select_coords[:, 0], select_coords[:, 1]]   # self.rays: [50, 256, 256, 6], index 决定了取哪一个角度或样例，后两项决定了横纵坐标
-                projs = d['projs'][i, select_coords[:, 0], select_coords[:, 1]]
-                out = {
-                    "projs":projs,
-                    "rays":rays,
-                }
-                outs.append(out)
-            return outs
+            out = {
+                "projs":projs,
+                "rays":rays,
+            }
+            return out
 
         elif self.type == "val":
-            d = self.data[index]
-            outs = []
-            for i in range(d['projs'].shape[0]):
-                rays = d['rays'][i]
-                projs = d['projs'][index]
-                out = {
-                    "projs":projs,
-                    "rays":rays,
-                }
-                outs.append(out)
-            return outs
 
+            out = {
+                "projs":d['projs'],
+                "rays":d['rays'],
+                "image":d['image'],
+                "voxels":d['voxels']
+            }
+
+            return out
     # 此处的 geo: ConeGeometry 表示什么？圆锥形几何
     # 冒号是类型建议符，告诉程序员希望传入的实参的类型
     @cache

@@ -10,7 +10,7 @@ import argparse
 def config_parser():
     parser = argparse.ArgumentParser()
     # parser.add_argument("--config", default=f"./config/nerf/chest_50.yaml", help="configs file path")
-    parser.add_argument("--config", default=f"./config/tensorf/chest_50.yaml", help="configs file path")
+    parser.add_argument("--config", default=f"./config/Lineformer/luna16_50.yaml", help="configs file path")
     parser.add_argument("--gpu_id", default="0", help="gpu to use")
     return parser
 
@@ -50,68 +50,53 @@ class BasicTrainer(Trainer):
 
     def compute_loss(self, data, global_step, idx_epoch):
         # stx()
-        full_loss = {'loss': 0.}
-        for i,d in enumerate(data):
-            rays = d["rays"].reshape(-1, 8)          # [1, 1024, 8] -> [1024, 8]
-            projs = d["projs"].reshape(-1)           # projection 的 ground truth [1, 1024] -> [1024]
-            ret = render(rays, self.net, self.net_fine, **self.conf["render"])
-            # stx()
-            projs_pred = ret["acc"]
+        rays = data["rays"].reshape(-1, 8)          # [1, 1024, 8] -> [1024, 8]
+        projs = data["projs"].reshape(-1)           # projection 的 ground truth [1, 1024] -> [1024]
+        ret = render(rays, self.net, self.net_fine, **self.conf["render"])
+        # stx()
+        projs_pred = ret["acc"]
 
-            loss = {"loss": 0.}
-            calc_mse_loss(loss, projs, projs_pred)
-            full_loss['loss'] += loss['loss']
-
+        loss = {"loss": 0.}
+        calc_mse_loss(loss, projs, projs_pred)
 
         # Log
-        for ls in full_loss.keys():
-            self.writer.add_scalar(f"train/{ls}", full_loss[ls].item(), global_step)
+        for ls in loss.keys():
+            self.writer.add_scalar(f"train/{ls}", loss[ls].item(), global_step)
 
-        return full_loss["loss"]
+        return loss["loss"]
 
     def eval_step(self, global_step, idx_epoch):
         """
         Evaluation step
         """
         # Evaluate projection    渲染投射的 RGB 图
+        loss = {
+            "proj_psnr": .0,
+            # "proj_ssim": get_ssim(projs_pred, projs),
+            "psnr_3d": .0,
+            # "ssim_3d": get_ssim_3d(image_pred, image),
+        }
         for index,d in enumerate(self.eval_dset): 
-            projs = d['projs']                 # [256, 256] -> [50, 256, 256]
-            rays = d['rays'].reshape(-1, 8)    # [65536,8]  -> [3276800, 8]
+            # TODO: assume batch size is 1
+            image = d['image'][0]
+            projs = d['projs'][0]                 # [256, 256] -> [50, 256, 256]
+            rays = d['rays'][0].reshape(-1, 8)    # [65536,8]  -> [3276800, 8]
             # stx()
             N, H, W = projs.shape
             projs_pred = []
             for i in tqdm(range(0, rays.shape[0], self.n_rays)):     # 每一簇射线是 n_rays ，每隔这么多射线渲染一次
                 projs_pred.append(render(rays[i:i+self.n_rays], self.net, self.net_fine, **self.conf["render"])["acc"])
+
             projs_pred = torch.cat(projs_pred, 0).reshape(N, H, W)
 
             # Evaluate density      渲染3D图像
-            image = d['image']
-            image_pred = run_network(d['voxels'], self.net_fine if self.net_fine is not None else self.net, self.netchunk)
+            image_pred = run_network(d['voxels'][0], self.net_fine if self.net_fine is not None else self.net, self.netchunk)
             # stx()
             image_pred = image_pred.squeeze()
             # stx()
-            loss = {
-                "proj_psnr": get_psnr(projs_pred, projs),
-                # "proj_ssim": get_ssim(projs_pred, projs),
-                "psnr_3d": get_psnr_3d(image_pred, image),
-                # "ssim_3d": get_ssim_3d(image_pred, image),
-            }
-            if loss["psnr_3d"] > self.best_psnr_3d:
-                torch.save(
-                    {
-                        "epoch": idx_epoch,
-                        "network": self.net.state_dict(),
-                        "network_fine": self.net_fine.state_dict() if self.n_fine > 0 else None,
-                        "optimizer": self.optimizer.state_dict(),
-                    },
-                    self.ckpt_best_dir,
-                )
-                self.best_psnr_3d = loss["psnr_3d"]
-                self.logger.info(f"best model update, epoch:{idx_epoch}, best 3d psnr:{self.best_psnr_3d:.4g}")
-            
-            # stx()
+            loss['proj_psnr'] += get_psnr(projs_pred, projs)
+            loss['psnr_3d'] += get_psnr_3d(image_pred, image)
 
-            # Logging
             show_slice = 5
             show_step = image.shape[-1]//show_slice
             show_image = image[...,::show_step]
@@ -125,9 +110,9 @@ class BasicTrainer(Trainer):
             self.writer.add_image("eval/density (row1: gt, row2: pred)", cast_to_image(show_density), global_step, dataformats="HWC")
 
             proj_pred_origin_dir = osp.join(self.expdir, f"{index}_proj_pred_origin")
-            proj_gt_origin_dir = osp.join(self.expdir, "{index}_proj_gt_origin")
-            proj_pred_dir = osp.join(self.expdir, "{index}_proj_pred")
-            proj_gt_dir = osp.join(self.expdir, "{index}_proj_gt")
+            proj_gt_origin_dir = osp.join(self.expdir, f"{index}_proj_gt_origin")
+            proj_pred_dir = osp.join(self.expdir, f"{index}_proj_pred")
+            proj_gt_dir = osp.join(self.expdir, f"{index}_proj_gt")
             # os.makedirs(eval_save_dir, exist_ok=True)
             os.makedirs(proj_pred_origin_dir, exist_ok=True)
             os.makedirs(proj_gt_origin_dir, exist_ok=True)
@@ -152,14 +137,32 @@ class BasicTrainer(Trainer):
             # 保存各种视图
             eval_save_dir = osp.join(self.evaldir, f"epoch_{idx_epoch:05d}")
             os.makedirs(eval_save_dir, exist_ok=True)
-            np.save(osp.join(eval_save_dir, "{i}image_pred.npy"), image_pred.cpu().detach().numpy())
-            np.save(osp.join(eval_save_dir, "{i}image_gt.npy"), image.cpu().detach().numpy())
-            iio.imwrite(osp.join(eval_save_dir, "{i}slice_show_row1_gt_row2_pred.png"), (cast_to_image(show_density)*255).astype(np.uint8))
+            np.save(osp.join(eval_save_dir, f"{i}image_pred.npy"), image_pred.cpu().detach().numpy())
+            np.save(osp.join(eval_save_dir, f"{i}image_gt.npy"), image.cpu().detach().numpy())
+            iio.imwrite(osp.join(eval_save_dir, f"{i}slice_show_row1_gt_row2_pred.png"), (cast_to_image(show_density)*255).astype(np.uint8))
             with open(osp.join(eval_save_dir, "stats.txt"), "w") as f: 
                 for key, value in loss.items(): 
                     f.write("%s: %f\n" % (key, value.item()))
+            
 
-            return loss
+        if loss["psnr_3d"] > self.best_psnr_3d:
+            torch.save(
+                {
+                    "epoch": idx_epoch,
+                    "network": self.net.state_dict(),
+                    #"network_fine": self.net_fine.state_dict() if self.n_fine > 0 else None,
+                    "optimizer": self.optimizer.state_dict(),
+                },
+                self.ckpt_best_dir,
+            )
+            self.best_psnr_3d = loss["psnr_3d"]
+            self.logger.info(f"best model update, epoch:{idx_epoch}, best 3d psnr:{self.best_psnr_3d:.4g}")
+        
+            # stx()
+
+            # Logging
+
+        return loss
 
 
 trainer = BasicTrainer()

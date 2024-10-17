@@ -49,13 +49,12 @@ class Trainer:
         '''
             eval 和 train dataset 并不相同
         '''
-        dataset = Dataset(cfg["exp"]["datadir"], cfg["train"]["n_rays"], "train", device) # 由dataset去构造数据集
+        train_dataset = Dataset(cfg["exp"]["train_datadir"], cfg["train"]["n_rays"], "train", device) # 由dataset去构造数据集
+        val_dataset = Dataset(cfg["exp"]["eval_datadir"], cfg["train"]["n_rays"], "val", device) # 由val
         # stx()
-        train_dataset, val_dataset = torch.utils.data.random_split(dataset, [150, 25])
-        self.train_dloader = DataLoader(train_dataset, batch_size=data.batch_size, shuffle=True, num_workers=data.num_workers)
-        self.eval_dset = DataLoader(val_dataset, batch_size=data.batch_size, shuffle=False, num_workers=data.num_workers)
+        self.train_dloader = DataLoader(train_dataset, batch_size=1, shuffle=True, num_workers=0)
+        self.eval_dset = DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=0)
 
-        self.voxels = self.eval_dset.data[0]['voxels'] if self.i_eval > 0 else None
         #train_dataset, val_dataset = torch.utils.data.random_split(dataset, [110, 21])
     
         # Network，实例化网络
@@ -114,7 +113,7 @@ class Trainer:
         for idx_epoch in range(self.epoch_start, self.epochs+1):
 
             # Evaluate
-            if (idx_epoch % self.i_eval == 0 or idx_epoch == self.epochs) and self.i_eval > 0:
+            if (idx_epoch % self.i_eval == 0 or idx_epoch == self.epochs) and self.i_eval > 0 and idx_epoch > 0:
                 self.net.eval()             # self.net 和 self.net_fine 分别表示粗细网络
                 with torch.no_grad():
                     loss_test = self.eval_step(global_step=self.global_step, idx_epoch=idx_epoch)

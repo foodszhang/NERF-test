@@ -52,7 +52,7 @@ randomAngle: False
 convert: True
 rescale_slope: 1.0
 rescale_intercept: 0.0
-normalize: True
+normalize: False
 
 # Noise
 noise: 0
