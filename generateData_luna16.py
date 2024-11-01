@@ -175,24 +175,32 @@ def loadImage(dirname, nVoxels, convert, rescale_slope, rescale_intercept, norma
         # stx()
     return image
 
-def multi_gen(dir_path, configPath,dataFolder,outputPath,dataType, show=False):
-    data_list = []
-    index = 0
-    for file in os.listdir(dir_path):
-        if file.endswith("mhd"):
-            matPath = os.path.join(dir_path, file)
-            data = generator(matPath, configPath, outputPath, dataFolder, dataType, index,show)
-            data_list.append(data)
-            index += 1
+def generate_blocks():
+    block_list = []
+    base = np.mgrid[:64, :64, :64] * 4 # 3, 64 ^ 3
+    base = base.reshape(3, -1)
+    for x in range(4):
+        for y in range(4):
+            for z in range(4):
+                offset = np.array([x, y, z])
+                block = base + offset[:, None]
+                block_list.append(block)
+    return block_list
 
-    with open(outputPath, "wb") as handle:
-        pickle.dump(data_list, handle, pickle.HIGHEST_PROTOCOL)
+def gen_image_block(image, save_dir):
+    block_list = generate_blocks()
+    blocks = np.stack(block_list, axis=0) # K, 3, N^3
+    blocks = blocks.transpose(0, 2, 1).astype(float) / 255 # K, N^3, 3
+    for k, block in enumerate(block_list):
+        block = block.reshape(3, -1).transpose(1, 0)
+        image_block = image[block[:, 0], block[:, 1], block[:, 2]]
+        np.save(os.path.join(save_dir, f'block_{k}.npy'), image_block)
 
-    print(f"Save files in {outputPath}")
 
 
 
-def generator(matPath, configPath, outputPath, dataFolder, dataType, index_num,show=False):
+
+def generator(matPath, configPath, dataFolder, dataType, index_num,show=False):
     """
     Generate projections given CT image and configuration.
 
@@ -275,36 +283,22 @@ def generator(matPath, configPath, outputPath, dataFolder, dataType, index_num,s
         # tigre.plotproj(data["val"]["projections"][:, ::-1, :])
 
     # Save data
-    os.makedirs(osp.dirname(outputPath), exist_ok=True)
-    with open('./test.pickle', "wb") as handle:
-        pickle.dump(data, handle, pickle.HIGHEST_PROTOCOL)
-
-    #print(f"Save files in {outputPath}")
     return data
 
 
-
-def generate_blocks():
-    block_list = []
-    base = np.mgrid[:64, :64, :64] * 4 # 3, 64 ^ 3
-    base = base.reshape(3, -1)
-    for x in range(4):
-        for y in range(4):
-            for z in range(4):
-                offset = np.array([x, y, z])
-                block = base + offset[:, None]
-                block_list.append(block)
-    return block_list
-
-def gen_image_block(image, block, save_dir):
-    block_list = generate_blocks()
-    blocks = np.stack(block_list, axis=0) # K, 3, N^3
-    blocks = blocks.transpose(0, 2, 1).astype(float) / 255 # K, N^3, 3
-    for k, block in enumerate(block_list):
-        block = block.reshape(3, -1).transpose(1, 0)
-        image_block = image[block[:, 0], block[:, 1], block[:, 2]]
-        np.save(os.path.join(save_dir, f'block_{k}.npy'), image_block)
-
+def multi_gen(dir_path, configPath,dataFolder,outputFolder,dataType, show=False):
+    index = 0
+    for file in os.listdir(dir_path):
+        if file.endswith("mhd"):
+            matPath = os.path.join(dir_path, file)
+            data = generator(matPath, configPath, dataFolder, dataType, index,show)
+            index += 1
+            outputDir = osp.join(outputFolder, f"{dataType}_{index}")
+            os.makedirs(outputDir, exist_ok=True)
+            outputPath = osp.join(outputDir, f"data.pickle")
+            with open(outputPath, "wb") as handle:
+                pickle.dump(data, handle, pickle.HIGHEST_PROTOCOL)
+            gen_image_block(data['image'], outputDir)
 
 if __name__ == "__main__":
     main()
