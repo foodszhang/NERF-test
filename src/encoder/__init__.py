@@ -21,10 +21,6 @@ def get_encoder(encoding, input_dim=3,
         encoder = HashEncoder(input_dim=input_dim, num_levels=num_levels, level_dim=level_dim, 
             base_resolution=base_resolution, 
             log2_hashmap_size=log2_hashmap_size)
-    elif encoding == "hashgrid":
-        encoder = HashEncoder(input_dim=input_dim, num_levels=num_levels, level_dim=level_dim, 
-            base_resolution=base_resolution, 
-            log2_hashmap_size=log2_hashmap_size)
     elif encoding == 'tiledgrid':
         from .gridencoder import GridEncoder
         encoder = GridEncoder(input_dim=input_dim, num_levels=num_levels, level_dim=level_dim, base_resolution=base_resolution, log2_hashmap_size=log2_hashmap_size, desired_resolution=2048, gridtype='tiled', align_corners=False)

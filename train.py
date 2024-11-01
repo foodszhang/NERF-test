@@ -25,7 +25,7 @@ print('!!!!!!', torch.cuda.is_available())
 from src.config.configloading import load_config
 from src.render import render, run_network
 from src.trainer import Trainer
-from src.loss import calc_mse_loss
+from src.loss import calc_mse_loss, calc_tv_loss, compute_tv_norm
 from src.utils import get_psnr, get_ssim, get_psnr_3d, get_ssim_3d, cast_to_image
 from pdb import set_trace as stx
 
@@ -45,20 +45,20 @@ class BasicTrainer(Trainer):
         """
         Basic network trainer.
         """
-        super().__init__(cfg, device)
+        super().__init__(cfg, 'cuda')
         print(f"[Start] exp: {cfg['exp']['expname']}, net: Basic network")
 
     def compute_loss(self, data, global_step, idx_epoch):
         # stx()
         rays = data["rays"].reshape(-1, 8)          # [1, 1024, 8] -> [1024, 8]
+
+        
         projs = data["projs"].reshape(-1)           # projection 的 ground truth [1, 1024] -> [1024]
         ret = render(rays, self.net, self.net_fine, **self.conf["render"])
         # stx()
         projs_pred = ret["acc"]
-
         loss = {"loss": 0.}
         calc_mse_loss(loss, projs, projs_pred)
-
         # Log
         for ls in loss.keys():
             self.writer.add_scalar(f"train/{ls}", loss[ls].item(), global_step)
@@ -87,11 +87,11 @@ class BasicTrainer(Trainer):
         # stx()
         loss = {
             "proj_psnr": get_psnr(projs_pred, projs),
-            # "proj_ssim": get_ssim(projs_pred, projs),
+            "proj_ssim": get_ssim(projs_pred, projs),
             "psnr_3d": get_psnr_3d(image_pred, image),
-            # "ssim_3d": get_ssim_3d(image_pred, image),
+            "ssim_3d": get_ssim_3d(image_pred, image),
         }
-        if loss["psnr_3d"] > self.best_psnr_3d:
+        if loss["ssim_3d"] > self.best_ssim_3d:
             torch.save(
                 {
                     "epoch": idx_epoch,
@@ -101,8 +101,8 @@ class BasicTrainer(Trainer):
                 },
                 self.ckpt_best_dir,
             )
-            self.best_psnr_3d = loss["psnr_3d"]
-            self.logger.info(f"best model update, epoch:{idx_epoch}, best 3d psnr:{self.best_psnr_3d:.4g}")
+            self.best_ssim_3d = loss["ssim_3d"]
+            self.logger.info(f"best model update, epoch:{idx_epoch}, best 3d psnr:{self.best_ssim_3d:.4g}")
         
         # stx()
 

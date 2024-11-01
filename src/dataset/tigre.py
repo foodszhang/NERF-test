@@ -60,6 +60,7 @@ class TIGREDataset(Dataset):
 
         if type == "train":
             self.projs = torch.tensor(data["train"]["projections"], dtype=torch.float32, device=device) # [50, 256, 256]
+            print('44444', self.projs.shape)
             angles = data["train"]["angles"]                    # [50]
             rays = self.get_rays(angles, self.geo, device)      # [50, 256, 256, 6] 在每一个角度下获取射线的原点和方向
             # stx()
@@ -73,18 +74,20 @@ class TIGREDataset(Dataset):
             # (256, 256, 2)
             coords = torch.stack(torch.meshgrid(torch.linspace(0, self.geo.nDetector[1] - 1, self.geo.nDetector[1], device=device),
                                                 torch.linspace(0, self.geo.nDetector[0] - 1, self.geo.nDetector[0], device=device), indexing="ij"),
-                                 -1)
-            # (256, 256, 2) -> (256 x 256, 2)
+                                 -1) # (256, 256, 2) -> (256 x 256, 2)
             self.coords = torch.reshape(coords, [-1, 2])
             # 也有 raw，但是和 rays 并不对应
-            self.image = torch.tensor(data["image"], dtype=torch.float32, device=device)                 # [128, 128, 128]
-            self.voxels = torch.tensor(self.get_voxels(self.geo), dtype=torch.float32, device=device)    # [128, 128, 128, 3]
+            #self.image = torch.tensor(data["image"], dtype=torch.float32, device=device)                 # [128, 128, 128]
+            #self.voxels = torch.tensor(self.get_voxels(self.geo), dtype=torch.float32, device=device)    # [128, 128, 128, 3]
         elif type == "val":
-            self.projs = torch.tensor(data["val"]["projections"], dtype=torch.float32, device=device)
-            angles = data["val"]["angles"]
+            #self.projs = torch.tensor(data["val"]["projections"], dtype=torch.float32, device=device)
+            #angles = data["val"]["angles"]
+            self.projs = torch.tensor(data["train"]["projections"], dtype=torch.float32, device=device)
+            angles = data["train"]["angles"]
             rays = self.get_rays(angles, self.geo, device)
             self.rays = torch.cat([rays, torch.ones_like(rays[...,:1])*self.near, torch.ones_like(rays[...,:1])*self.far], dim=-1)
-            self.n_samples = data["numVal"]
+            #self.n_samples = data["numVal"]
+            self.n_samples = data["numTrain"]
             self.image = torch.tensor(data["image"], dtype=torch.float32, device=device)
             self.voxels = torch.tensor(self.get_voxels(self.geo), dtype=torch.float32, device=device)
             # stx()

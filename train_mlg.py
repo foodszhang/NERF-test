@@ -8,8 +8,8 @@ import argparse
 
 def config_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", default="./config/Lineformer/chest_50.yaml",help="configs file path")
-    parser.add_argument("--gpu_id", default="1", help="gpu to use")
+    parser.add_argument("--config", default=f"./config/Lineformer/luna16_50_simple.yaml", help="configs file path")
+    parser.add_argument("--gpu_id", default="0", help="gpu to use")
     return parser
 
 parser = config_parser()
@@ -24,8 +24,8 @@ os.environ["CUDA_HOME"]='C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\
 from src.config.configloading import load_config
 from src.render import render, run_network
 from src.trainer_mlg import Trainer
-from src.loss import calc_mse_loss
-from src.utils import get_psnr, get_mse, get_psnr_3d, get_ssim_3d, cast_to_image, get_ssim
+from src.loss import calc_mse_loss, compute_tv_norm, calc_tv_loss
+from src.utils import get_psnr, get_mse, get_psnr_3d, get_ssim_3d, cast_to_image, get_ssim, SSIM, c_ssim
 from pdb import set_trace as stx
 
 
@@ -46,24 +46,26 @@ class BasicTrainer(Trainer):
         """
         super().__init__(cfg, device)
         print(f"[Start] exp: {cfg['exp']['expname']}, net: Basic network")
+        self.SSIM = SSIM()
 
     def compute_loss(self, data, global_step, idx_epoch):
-        rays = data["rays"].reshape(-1, 8)             # [1, 1024, 8] -> [1024, 8]
-        # stx()
-        projs = data["projs"].reshape(-1)            # projection 的 ground truth [1, 1024] -> [1024]
+        rays = data["rays"].reshape(-1, 8)          # [1, 1024, 8] -> [1024, 8]
+        projs = data["projs"].reshape(-1)           # projection 的 ground truth [1, 1024] -> [1024]
         ret = render(rays, self.net, self.net_fine, **self.conf["render"])
         # stx()
-        # stx()
         projs_pred = ret["acc"]
-
         loss = {"loss": 0.}
         calc_mse_loss(loss, projs, projs_pred)
 
+        #image_pred = run_network(self.eval_dset.voxels, self.net, self.netchunk)
+        #image_pred = image_pred.squeeze()
+        #calc_tv_loss(loss, image_pred, 1e-3)
         # Log
         for ls in loss.keys():
             self.writer.add_scalar(f"train/{ls}", loss[ls].item(), global_step)
 
         return loss["loss"]
+
 
     def eval_step(self, global_step, idx_epoch):
         """
@@ -91,7 +93,7 @@ class BasicTrainer(Trainer):
             "psnr_3d": get_psnr_3d(image_pred, image),
             "ssim_3d": get_ssim_3d(image_pred, image),
         }
-        if loss["psnr_3d"] > self.best_psnr_3d:
+        if loss["ssim_3d"] > self.best_ssim_3d:
             torch.save(
                 {
                     "epoch": idx_epoch,
@@ -101,8 +103,8 @@ class BasicTrainer(Trainer):
                 },
                 self.ckpt_best_dir,
             ) # 此处并没有save best的操作呀
-            self.best_psnr_3d = loss["psnr_3d"]
-            self.logger.info(f"best model update, epoch:{idx_epoch}, best 3d psnr:{self.best_psnr_3d:.4g}")
+            self.best_ssim_3d = loss["ssim_3d"]
+            self.logger.info(f"best model update, epoch:{idx_epoch}, best 3d ssim:{self.best_ssim_3d:.4g}")
 
         # Logging
         show_slice = 5

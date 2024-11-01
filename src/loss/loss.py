@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 
 
 def calc_mse_loss(loss, x, y):
@@ -38,4 +39,24 @@ def calc_tv_loss(loss, x, k):
     return loss
 
 
+def compute_tv_norm(values, losstype='l2', weighting=None):  # pylint: disable=g-doc-args
+  """Returns TV norm for input values.
+
+  Note: The weighting / masking term was necessary to avoid degenerate
+  solutions on GPU; only observed on individual DTU scenes.
+  """
+  v00 = values[:, :-1, :-1]
+  v01 = values[:, :-1, 1:]
+  v10 = values[:, 1:, :-1]
+
+  if losstype == 'l2':
+    loss = ((v00 - v01) ** 2) + ((v00 - v10) ** 2)
+  elif losstype == 'l1':
+    loss = np.abs(v00 - v01) + np.abs(v00 - v10)
+  else:
+    raise ValueError('Not supported losstype.')
+
+  if weighting is not None:
+    loss = loss * weighting
+  return loss
 

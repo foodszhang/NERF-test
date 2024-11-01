@@ -119,7 +119,8 @@ def convert_to_attenuation(data: np.array, rescale_slope: float, rescale_interce
     return mu
 
 
-def loadImage(dirname, nVoxels, convert, rescale_slope, rescale_intercept, normalize=True):
+
+def loadImage(dirname, nVoxels, convert, rescale_slope, rescale_intercept, normalize=True, normalize_window=[-1000, 3000]):
     """
     Load CT image.
     """
@@ -139,6 +140,8 @@ def loadImage(dirname, nVoxels, convert, rescale_slope, rescale_intercept, norma
     if convert:
         print("Convert from HU to attenuation")
         image = convert_to_attenuation(image_ori, rescale_slope, rescale_intercept)
+        normalize_window[0] = convert_to_attenuation(normalize_window[0], rescale_slope, rescale_intercept)
+        normalize_window[1] = convert_to_attenuation(normalize_window[1], rescale_slope, rescale_intercept)
     else:
         image = image_ori
 
@@ -161,6 +164,10 @@ def loadImage(dirname, nVoxels, convert, rescale_slope, rescale_intercept, norma
     image_max = np.max(image)
     image_min = np.min(image)
     image_mean = np.mean(image)
+    if normalize_window is not None:
+        print(f"Normalize window to {normalize_window}")
+        image = np.clip(image, normalize_window[0], normalize_window[1])
+        image_min, image_max = normalize_window
     print("Range of CT image is [%f, %f], mean: %f" % (image_min, image_max, image_mean))
     if normalize and image_min !=0 and image_max != 1:
         print("Normalize range to [0, 1]")
@@ -274,6 +281,29 @@ def generator(matPath, configPath, outputPath, dataFolder, dataType, index_num,s
 
     #print(f"Save files in {outputPath}")
     return data
+
+
+
+def generate_blocks():
+    block_list = []
+    base = np.mgrid[:64, :64, :64] * 4 # 3, 64 ^ 3
+    base = base.reshape(3, -1)
+    for x in range(4):
+        for y in range(4):
+            for z in range(4):
+                offset = np.array([x, y, z])
+                block = base + offset[:, None]
+                block_list.append(block)
+    return block_list
+
+def gen_image_block(image, block, save_dir):
+    block_list = generate_blocks()
+    blocks = np.stack(block_list, axis=0) # K, 3, N^3
+    blocks = blocks.transpose(0, 2, 1).astype(float) / 255 # K, N^3, 3
+    for k, block in enumerate(block_list):
+        block = block.reshape(3, -1).transpose(1, 0)
+        image_block = image[block[:, 0], block[:, 1], block[:, 2]]
+        np.save(os.path.join(save_dir, f'block_{k}.npy'), image_block)
 
 
 if __name__ == "__main__":

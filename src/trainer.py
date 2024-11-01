@@ -39,9 +39,12 @@ class Trainer:
         self.ckptdir_backup = osp.join(self.expdir, "ckpt_backup.tar")
         self.ckpt_best_dir = osp.join(self.expdir, "ckpt_best.tar")
         self.best_psnr_3d = 0
+        self.best_ssim_3d = 0
         self.evaldir = osp.join(self.expdir, "eval")
         os.makedirs(self.evaldir, exist_ok=True)
         self.logger = gen_log(self.expdir)
+        #self.pretrained = './pretrained/luna16_simple_90_ckpt_best.tar'
+        self.pretrained = None
 
         # Dataset，读数据，dataloader
         '''
@@ -79,6 +82,13 @@ class Trainer:
 
         # Load checkpoints
         self.epoch_start = 0
+        if self.pretrained:
+            print(f"Load checkpoints from {self.ckptdir}.")
+            ckpt = torch.load(self.pretrained)
+            self.optimizer.load_state_dict(ckpt["optimizer"])
+            self.global_step = self.epoch_start * len(self.train_dloader)
+            self.net.load_state_dict(ckpt["network"])
+
         if cfg["train"]["resume"] and osp.exists(self.ckptdir):
             print(f"Load checkpoints from {self.ckptdir}.")
             ckpt = torch.load(self.ckptdir)
@@ -115,7 +125,7 @@ class Trainer:
         for idx_epoch in range(self.epoch_start, self.epochs+1):
 
             # Evaluate
-            if (idx_epoch % self.i_eval == 0 or idx_epoch == self.epochs) and self.i_eval > 0:
+            if (idx_epoch % self.i_eval == 0 or idx_epoch == self.epochs) and self.i_eval > 0 and idx_epoch > 0:
                 self.net.eval()             # self.net 和 self.net_fine 分别表示粗细网络
                 with torch.no_grad():
                     loss_test = self.eval_step(global_step=self.global_step, idx_epoch=idx_epoch)

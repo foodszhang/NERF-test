@@ -93,6 +93,10 @@ class TIGREDataset_MLG(Dataset):
         if type == "train":
             self.projs = torch.tensor(data["train"]["projections"], dtype=torch.float32, device=device) # [50, 256, 256]
             angles = data["train"]["angles"]                    # [50]
+            nei_angles = [[],[]]
+            for angle in angles:
+                nei_angles[0].append(angle - np.pi/2)
+                nei_angles[1].append(angle + np.pi/2)
             rays = self.get_rays(angles, self.geo, device)      # [50, 256, 256, 6] 在每一个角度下获取射线的原点和方向 每一个像素点对应的ray
             # stx()
             '''
@@ -101,6 +105,10 @@ class TIGREDataset_MLG(Dataset):
                 给 rays concate 了一个近平面 self.near * ones([50, 256, 256, 1]) 和一个远平面 self.far * ones([50, 256, 256, 1])
             '''
             self.rays = torch.cat([rays, torch.ones_like(rays[...,:1])*self.near, torch.ones_like(rays[...,:1])*self.far], dim=-1) 
+            self.nei_rays = [torch.Tensor(),torch.Tensor()]
+            for i in range(len(nei_angles)):
+                nei_rays = self.get_rays(nei_angles[i], self.geo, device)      # [100, 256, 256, 6] 
+                self.nei_rays[i] = torch.cat([nei_rays, torch.ones_like(nei_rays[...,:1])*self.near, torch.ones_like(nei_rays[...,:1])*self.far], dim=-1)
             self.n_samples = data["numTrain"]
             # (256, 256, 2)
             coords = torch.stack(torch.meshgrid(torch.linspace(0, self.geo.nDetector[1] - 1, self.geo.nDetector[1], device=device),
@@ -133,8 +141,10 @@ class TIGREDataset_MLG(Dataset):
             '''
             rays = self.rays[index]      # [256, 256, 8]
             projs = self.projs[index]    # [256, 256]
+            neighbors_rays = (self.nei_rays[i][index] for i in range(len(self.nei_rays)))      # [256, 256, 8]
 
             rays_window = ray_window_partition(rays, self.window_size)    # [256, 256, 8] -> [64, 32, 32, 8]
+            neighbors_rays = (ray_window_partition(rays, self.window_size) for rays in neighbors_rays) # [256, 256, 8] -> [64, 32, 32, 8]
             projs_window = proj_window_partition(projs, self.window_size)  # [256, 256] -> [64, 32, 32]
 
             # 全是 valid 的 window
@@ -144,9 +154,13 @@ class TIGREDataset_MLG(Dataset):
             
             projs_window_select = projs_window[select_inds_window]      # [36, 32, 32]
             rays_window_select = rays_window[select_inds_window]        # [36, 32, 32, 8]
+            #neighbors_rays_window_select = [nei_rays[select_inds_window] for nei_rays in neighbors_rays] # [36, 32, 32, 8]
+
             # stx()
             selected_rays_window = rays_window_select.reshape(-1,8)             # [1, 32, 32, 8]
             selected_projs_window = projs_window_select.flatten()           # [1, 32, 32]
+            #selected_nei_rays_window = [selected.reshape(-1,8) for selected in neighbors_rays_window_select] # [1, 32, 32, 8]
+
             # stx()
 
             total_inds = [i for i in range(projs_window.shape[0])]
@@ -185,11 +199,14 @@ class TIGREDataset_MLG(Dataset):
             # stx() 
             selected_rays_window_valid = torch.concat([selected_rays_window, selected_rays_else], dim=0)        # [num, 8]
             selected_projs_window_valid = torch.concat([selected_projs_window, selected_projs_else], dim=0)     # [num]
-
+            #selected_rays_window_valid = torch.concat([selected_rays_window], dim=0)        # [num, 8]
+            #selected_projs_window_valid = torch.concat([selected_projs_window], dim=0)     # [num]
             out = {
                 "projs":selected_projs_window_valid,  
                 "rays":selected_rays_window_valid,
+                #"neighbors_rays":selected_nei_rays_window,
             }
+            return out
         elif self.type == "val":
             rays = self.rays[index]
             projs = self.projs[index]
@@ -197,7 +214,7 @@ class TIGREDataset_MLG(Dataset):
                 "projs":projs,
                 "rays":rays,
             }
-        return out
+            return out
 
     # 此处的 geo: ConeGeometry 表示什么？圆锥形几何
     # 冒号是类型建议符，告诉程序员希望传入的实参的类型

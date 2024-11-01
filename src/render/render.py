@@ -47,7 +47,7 @@ def render(rays, net, net_fine, n_samples, n_fine, perturb, netchunk, raw_noise_
         raw = run_network(pts, net_fine, netchunk)
         acc, _ = raw2outputs(raw, z_vals, rays_d, raw_noise_std)
 
-    ret = {"acc": acc, "pts":pts, "raw":raw}
+    ret = {"acc": acc, "pts":pts, "raw":raw, "weights":weights}
     
     if net_fine is not None and n_fine > 0:
         ret["acc0"] = acc_0
