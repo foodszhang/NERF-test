@@ -45,6 +45,19 @@ class Trainer:
         self.logger = gen_log(self.expdir)
         #self.pretrained = './pretrained/luna16_simple_90_ckpt_best.tar'
         self.pretrained = None
+        ckpt_path = f'./pretrained/dif.pth'
+        ckpt = torch.load(ckpt_path)
+        print('load ckpt from', ckpt_path)
+        #TODO: HARD CODE 
+        dif_model = get_network('dif')(
+            num_views=10,
+            combine='mlp'
+        )
+        dif_model.load_state_dict(ckpt)
+        dif_model = dif_model
+        #预训练好的，无需再训练
+        dif_model.eval()
+
 
         # Dataset，读数据，dataloader
         '''
@@ -63,6 +76,30 @@ class Trainer:
         # stx()
         self.net = network(encoder, **cfg["network"]).to(device)
         grad_vars = list(self.net.parameters())
+                # -- collect data
+        angles = np.array(train_dset.angles, dtype=float) # ~[0, +pi]
+        angles = angles / np.pi * 2 - 1 # => [-1, 1]
+        shape = train_dset.projs.shape
+        shape = 1, shape[0], 1, shape[1], shape[2]
+
+        #train_data_dict = {
+        #    'points': train_dset.total_points,           # 3D points
+        #    'angles': angles[:, None],  # angles
+        #    'proj_points': train_dset.total_proj_points, # projected points
+        #    'projs': train_dset.projs.reshape(shape).data.cpu(),             # 2D projections
+        #}
+        val_data_dict = {
+            'points': self.eval_dset.total_points,           # 3D points
+            'angles': angles[:, None],  # angles
+            'proj_points': self.eval_dset.total_proj_points, # projected points
+            'projs': self.eval_dset.projs.reshape(shape).data.cpu(),             # 2D projections
+        }
+
+
+
+        #self.train_voxel = dif_model(train_data_dict, is_eval=True)
+        self.eval_voxel = dif_model(val_data_dict, is_eval=True)
+        print('fine')
         self.net_fine = None
         if self.n_fine > 0:
             self.net_fine = network(encoder, **cfg["network"]).to(device)
@@ -125,7 +162,7 @@ class Trainer:
         for idx_epoch in range(self.epoch_start, self.epochs+1):
 
             # Evaluate
-            if (idx_epoch % self.i_eval == 0 or idx_epoch == self.epochs) and self.i_eval > 0 and idx_epoch > 0:
+            if (idx_epoch % self.i_eval == 0 or idx_epoch == self.epochs) and self.i_eval > 0 :
                 self.net.eval()             # self.net 和 self.net_fine 分别表示粗细网络
                 with torch.no_grad():
                     loss_test = self.eval_step(global_step=self.global_step, idx_epoch=idx_epoch)

@@ -6,8 +6,8 @@ exp:
     #eval_datadir: ./data/luna16_17_5_eval.pickle
     #datadir: ./data/luna16_50.pickle
     #datadir: ./data/luna16_17.pickle
-    #datadir: ./data/chest_10.pickle
-  datadir: ./data/chest_50.pickle
+    #datadir: ./data/chest_50.pickle
+  datadir: ./data/luna16/data.pickle
 #network:
   #net_type: Lineformer
   #num_layers: 4
@@ -24,40 +24,40 @@ network:
   net_type: mlp
   num_layers: 4
   hidden_dim: 128
-  skips: [2]
+  skips: [4]
   out_dim: 1
   last_activation: relu
   bound: 0.3
     #encoder:
     #  encoding: tensorf
     #  num_levels: 256
-    #encoder:
-    #  encoding: hashgrid
-    #  #encoding: None
-    #  #encoding: tensorf
-    #  #encoding: sphere_harmonics
-    #  #encoding: tiledgrid
-    #  input_dim: 3
-    #  num_levels: 16
-    #  level_dim: 2
-    #  base_resolution: 16
-    #  log2_hashmap_size: 19
 encoder:
-  encoding: sphere_harmonics
+  encoding: hashgrid
+  #encoding: None
+  #encoding: tensorf
+  #encoding: sphere_harmonics
+  #encoding: tiledgrid
   input_dim: 3
-  degree: 6
+  num_levels: 16
+  level_dim: 2
+  base_resolution: 16
+  log2_hashmap_size: 19
+    #encoder:
+    #  encoding: sphere_harmonics
+    #  input_dim: 3
+    #  degree: 6
   #encoding: None
   #encoding: tensorf
   #encoding: sphere_harmonics
   #encoding: tiledgrid
 render:
-  n_samples: 1024    
+  n_samples: 512    
   n_fine: 0         
   perturb: True
   raw_noise_std: 0.
   netchunk: 409600  # batchsize of points
 train:
-  epoch: 2000
+  epoch: 200
   n_batch: 1
   n_rays: 512
   lrate: 0.001

@@ -6,6 +6,16 @@ import numpy as np
 from .unet import UNet
 from .point_classifier import SurfaceClassifier
 from .network import  DensityNetwork
+
+def index_2d(feat, uv):
+    # https://zhuanlan.zhihu.com/p/137271718
+    # feat: [B, C, H, W]
+    # uv: [B, N, 2]
+    uv = uv.unsqueeze(2) # [B, N, 1, 2]
+    feat = feat.transpose(2, 3) # [W, H]
+    samples = torch.nn.functional.grid_sample(feat, uv, align_corners=True) # [B, C, N, 1]
+    return samples[:, :, :, 0] # [B, C, N]
+
 class MLP(nn.Module):
     def __init__(self, mlp_list, use_bn=False):
         super().__init__()
@@ -23,7 +33,7 @@ class MLP(nn.Module):
         return self.layer(x)
 
 
-class Mix_Net(nn.Module):
+class DIF_Net(nn.Module):
     def __init__(self, num_views, combine, mid_ch=128):
         super().__init__()
         self.combine = combine

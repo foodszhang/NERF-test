@@ -5,6 +5,7 @@ import imageio.v2 as iio
 import numpy as np
 from tqdm import tqdm
 import argparse
+import skimage as ski
 
 
 def config_parser():
@@ -54,7 +55,7 @@ class BasicTrainer(Trainer):
 
         
         projs = data["projs"].reshape(-1)           # projection 的 ground truth [1, 1024] -> [1024]
-        ret = render(rays, self.net, self.net_fine, **self.conf["render"])
+        ret = render(rays, self.net, self.dif_net,self.net_fine, **self.conf["render"])
         # stx()
         projs_pred = ret["acc"]
         loss = {"loss": 0.}
@@ -74,20 +75,21 @@ class BasicTrainer(Trainer):
         rays = self.eval_dset.rays.reshape(-1, 8)    # [65536,8]  -> [3276800, 8]
         # stx()
         N, H, W = projs.shape
-        projs_pred = []
-        for i in tqdm(range(0, rays.shape[0], self.n_rays)):     # 每一簇射线是 n_rays ，每隔这么多射线渲染一次
-            projs_pred.append(render(rays[i:i+self.n_rays], self.net, self.net_fine, **self.conf["render"])["acc"])
-        projs_pred = torch.cat(projs_pred, 0).reshape(N, H, W)
+        #projs_pred = []
+        #for i in tqdm(range(0, rays.shape[0], self.n_rays)):     # 每一簇射线是 n_rays ，每隔这么多射线渲染一次
+        #    projs_pred.append(render(rays[i:i+self.n_rays], self.net, self.dif_net, self.net_fine, **self.conf["render"])["acc"])
+        #projs_pred = torch.cat(projs_pred, 0).reshape(N, H, W)
 
         # Evaluate density      渲染3D图像
         image = self.eval_dset.image
-        image_pred = run_network(self.eval_dset.voxels, self.net_fine if self.net_fine is not None else self.net, self.netchunk)
+        image_pred = run_network(
+            self.eval_dset.voxels, self.net_fine if self.net_fine is not None else self.net, self.netchunk)
         # stx()
         image_pred = image_pred.squeeze()
         # stx()
         loss = {
-            "proj_psnr": get_psnr(projs_pred, projs),
-            "proj_ssim": get_ssim(projs_pred, projs),
+            #"proj_psnr": get_psnr(projs_pred, projs),
+            #"proj_ssim": get_ssim(projs_pred, projs),
             "psnr_3d": get_psnr_3d(image_pred, image),
             "ssim_3d": get_ssim_3d(image_pred, image),
         }
@@ -117,26 +119,26 @@ class BasicTrainer(Trainer):
         show_density = torch.concat(show, dim=1)
 
         # cast_to_image -> 转成 numpy并多加一个维度
-        self.writer.add_image("eval/density (row1: gt, row2: pred)", cast_to_image(show_density), global_step, dataformats="HWC")
+        #self.writer.add_image("eval/density (row1: gt, row2: pred)", cast_to_image(show_density), global_step, dataformats="HWC")
 
-        proj_pred_origin_dir = osp.join(self.expdir, "proj_pred_origin")
-        proj_gt_origin_dir = osp.join(self.expdir, "proj_gt_origin")
-        proj_pred_dir = osp.join(self.expdir, "proj_pred")
-        proj_gt_dir = osp.join(self.expdir, "proj_gt")
-        # os.makedirs(eval_save_dir, exist_ok=True)
-        os.makedirs(proj_pred_origin_dir, exist_ok=True)
-        os.makedirs(proj_gt_origin_dir, exist_ok=True)
-        os.makedirs(proj_pred_dir, exist_ok=True)
-        os.makedirs(proj_gt_dir, exist_ok=True)
+        #proj_pred_origin_dir = osp.join(self.expdir, "proj_pred_origin")
+        #proj_gt_origin_dir = osp.join(self.expdir, "proj_gt_origin")
+        #proj_pred_dir = osp.join(self.expdir, "proj_pred")
+        #proj_gt_dir = osp.join(self.expdir, "proj_gt")
+        ## os.makedirs(eval_save_dir, exist_ok=True)
+        #os.makedirs(proj_pred_origin_dir, exist_ok=True)
+        #os.makedirs(proj_gt_origin_dir, exist_ok=True)
+        #os.makedirs(proj_pred_dir, exist_ok=True)
+        #os.makedirs(proj_gt_dir, exist_ok=True)
 
-        for i in tqdm(range(N)):
-            '''
-                cast_to_image 自带了归一化, 1 - 放在外边
-            '''
-            iio.imwrite(osp.join(proj_pred_origin_dir, f"proj_pred_{str(i)}.png"), (cast_to_image(projs_pred[i])*255).astype(np.uint8))
-            iio.imwrite(osp.join(proj_gt_origin_dir, f"proj_gt_{str(i)}.png"), (cast_to_image(projs[i])*255).astype(np.uint8))
-            iio.imwrite(osp.join(proj_pred_dir, f"proj_pred_{str(i)}.png"), ((1-cast_to_image(projs_pred[i]))*255).astype(np.uint8))
-            iio.imwrite(osp.join(proj_gt_dir, f"proj_gt_{str(i)}.png"), ((1-cast_to_image(1-projs[i]))*255).astype(np.uint8))
+        #for i in tqdm(range(N)):
+        #    '''
+        #        cast_to_image 自带了归一化, 1 - 放在外边
+        #    '''
+        #    ski.io.imsave(osp.join(proj_pred_origin_dir, f"proj_pred_{str(i)}.png"), ski.color.gray2rgb((cast_to_image(projs_pred[i])*255).astype(np.uint8)))
+        #    ski.io.imsave(osp.join(proj_gt_origin_dir, f"proj_gt_{str(i)}.png"), ski.color.gray2rgb((cast_to_image(projs[i])*255).astype(np.uint8)))
+        #    ski.io.imsave(osp.join(proj_pred_dir, f"proj_pred_{str(i)}.png"), ski.color.gray2rgb(((1-cast_to_image(projs_pred[i]))*255).astype(np.uint8)))
+        #    ski.io.imsave(osp.join(proj_gt_dir, f"proj_gt_{str(i)}.png"), ski.color.gray2rgb(((1-cast_to_image(1-projs[i]))*255).astype(np.uint8)))
 
 
         # stx()
@@ -149,7 +151,7 @@ class BasicTrainer(Trainer):
         os.makedirs(eval_save_dir, exist_ok=True)
         np.save(osp.join(eval_save_dir, "image_pred.npy"), image_pred.cpu().detach().numpy())
         np.save(osp.join(eval_save_dir, "image_gt.npy"), image.cpu().detach().numpy())
-        iio.imwrite(osp.join(eval_save_dir, "slice_show_row1_gt_row2_pred.png"), (cast_to_image(show_density)*255).astype(np.uint8))
+        iio.imwrite(osp.join(eval_save_dir, "slice_show_row1_gt_row2_pred.png"), ski.color.gray2rgb((cast_to_image(show_density)*255).astype(np.uint8)))
         with open(osp.join(eval_save_dir, "stats.txt"), "w") as f: 
             for key, value in loss.items(): 
                 f.write("%s: %f\n" % (key, value.item()))

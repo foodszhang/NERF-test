@@ -3,6 +3,7 @@ import pickle
 import os
 import sys
 import numpy as np
+from copy import deepcopy
 
 from torch.utils.data import DataLoader, Dataset
 from pdb import set_trace as stx
@@ -40,6 +41,45 @@ class ConeGeometry(object):
         self.mode = data["mode"]  # parallel, cone                ...
         self.filter = data["filter"]
 
+        self.v_res = data['nVoxel'][0]    # ct scan
+        self.p_res = data['nDetector'][0] # projections
+        self.v_spacing = np.array(data['dVoxel'])[0]    # mm
+        self.p_spacing = np.array(data['dDetector'])[0] # mm
+
+        self.DSO_mm = data['DSO'] # mm
+        self.DSD_mm = data['DSD'] # mm
+
+    def project(self, points, angle):
+        # points: [N, 3] ranging from [0, 1]
+        # d_points: [N, 2] ranging from [-1, 1]
+
+        #points = deepcopy(points).astype(float)
+        points[:, :2] -= 0.5 # [-0.5, 0.5]
+        points[:, 2] = 0.5 - points[:, 2] # [-0.5, 0.5]
+        points *= self.v_res * self.v_spacing # mm
+
+        angle = -1 * angle # inverse direction
+        rot_M = np.array([
+            [np.cos(angle), -np.sin(angle), 0],
+            [np.sin(angle),  np.cos(angle), 0],
+            [            0,              0, 1]
+        ])
+        rot_M = torch.tensor(rot_M, dtype=torch.float32)
+        rot_M = rot_M.to(points.device)
+        points = points @ rot_M.T
+
+        d1 = self.DSO_mm
+        d2 = self.DSD_mm
+        
+        coeff = (d2) / (d1 - points[:, 0]) # N,
+        d_points = points[:, [2, 1]] * coeff[:, None] # [N, 2] float
+        d_points /= (self.p_res * self.p_spacing)
+        d_points *= 2 # NOTE: some points may fall outside [-1, 1]
+
+        return d_points
+
+
+
 
 # dataloader，把数据做成 TIGRE 数据类型
 class TIGREDataset(Dataset):
@@ -57,10 +97,14 @@ class TIGREDataset(Dataset):
         self.type = type
         self.n_rays = n_rays
         self.near, self.far = self.get_near_far(self.geo)
+        self.voxels = self.get_voxels(self.geo)
+        self.total_points = self.coord_to_dif(self.voxels)
+        self.voxels = torch.tensor(self.voxels)
+        angles = []
 
         if type == "train":
             self.projs = torch.tensor(data["train"]["projections"], dtype=torch.float32, device=device) # [50, 256, 256]
-            print('44444', self.projs.shape)
+            #print('44444', self.projs.shape)
             angles = data["train"]["angles"]                    # [50]
             rays = self.get_rays(angles, self.geo, device)      # [50, 256, 256, 6] 在每一个角度下获取射线的原点和方向
             # stx()
@@ -76,24 +120,52 @@ class TIGREDataset(Dataset):
                                                 torch.linspace(0, self.geo.nDetector[0] - 1, self.geo.nDetector[0], device=device), indexing="ij"),
                                  -1) # (256, 256, 2) -> (256 x 256, 2)
             self.coords = torch.reshape(coords, [-1, 2])
+            self.angles = data["train"]["angles"]
             # 也有 raw，但是和 rays 并不对应
             #self.image = torch.tensor(data["image"], dtype=torch.float32, device=device)                 # [128, 128, 128]
             #self.voxels = torch.tensor(self.get_voxels(self.geo), dtype=torch.float32, device=device)    # [128, 128, 128, 3]
         elif type == "val":
-            #self.projs = torch.tensor(data["val"]["projections"], dtype=torch.float32, device=device)
-            #angles = data["val"]["angles"]
-            self.projs = torch.tensor(data["train"]["projections"], dtype=torch.float32, device=device)
-            angles = data["train"]["angles"]
+            self.projs = torch.tensor(data["val"]["projections"], dtype=torch.float32, device=device)
+            angles = data["val"]["angles"]
+            #self.projs = torch.tensor(data["train"]["projections"], dtype=torch.float32, device=device)
+            #angles = data["train"]["angles"]
             rays = self.get_rays(angles, self.geo, device)
             self.rays = torch.cat([rays, torch.ones_like(rays[...,:1])*self.near, torch.ones_like(rays[...,:1])*self.far], dim=-1)
-            #self.n_samples = data["numVal"]
-            self.n_samples = data["numTrain"]
+            self.n_samples = data["numVal"]
+            #self.n_samples = data["numTrain"]
             self.image = torch.tensor(data["image"], dtype=torch.float32, device=device)
-            self.voxels = torch.tensor(self.get_voxels(self.geo), dtype=torch.float32, device=device)
             # stx()
         
+        self.total_points = self.total_points.reshape(3, -1)
+        self.total_points = self.total_points.transpose(1, 0) # N, 3
+        self.total_points[:, :2] -= 0.5 # [-0.5, 0.5]
+        self.total_points[:, 2] = 0.5 - self.total_points[:, 2] # [-0.5, 0.5]
+        self.total_points *= 2 # => [-1, 1]
+
+
+        proj_points = []
+        self.total_points = torch.tensor(self.total_points, dtype=torch.float32, device=device)
+        for a in angles:
+            p = self.geo.project(self.total_points, a)
+            proj_points.append(p)
+        proj_points = torch.stack(proj_points, axis=0) # M, N, 2
+        self.angles = angles
+        self.total_proj_points = torch.tensor(proj_points, dtype=torch.float32, device=device)
+        self.total_points = self.total_points.reshape(1, *self.total_points.shape)
+        self.total_proj_points = self.total_proj_points.reshape(1, *self.total_proj_points.shape)
+        self.total_proj_points = self.total_proj_points.data.cpu()
+        self.total_points = self.total_points.data.cpu()
+
     def __len__(self):
         return self.n_samples
+
+
+    # TODO: 硬编码
+    def coord_to_sax(self, points):
+        return points * (0.1275+0.1275) - 0.1275
+    # TODO: 硬编码
+    def coord_to_dif(self, points):
+        return (points  + 0.1275) / (0.1275+0.1275)
 
     def __getitem__(self, index):
         if self.type == "train":
@@ -114,6 +186,7 @@ class TIGREDataset(Dataset):
                 "projs":projs,
                 "rays":rays,
             }
+            return out
         elif self.type == "val":
             rays = self.rays[index]
             projs = self.projs[index]
@@ -121,7 +194,7 @@ class TIGREDataset(Dataset):
                 "projs":projs,
                 "rays":rays,
             }
-        return out
+            return out
 
     # 此处的 geo: ConeGeometry 表示什么？圆锥形几何
     # 冒号是类型建议符，告诉程序员希望传入的实参的类型

@@ -4,6 +4,7 @@ __pycache__/
 *.pickle
 output/
 pretrained/
+*.png
 
 
 

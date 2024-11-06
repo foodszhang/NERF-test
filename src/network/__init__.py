@@ -1,6 +1,6 @@
 from .network import DensityNetwork
 from .Lineformer import Lineformer
-from .mix import Mix_Net
+from .mix import DIF_Net
 
 
 
@@ -10,8 +10,8 @@ def get_network(type):
         return DensityNetwork
     elif type == "Lineformer":
         return Lineformer
-    elif type == 'mix':
-        return Mix_Net
+    elif type == 'dif':
+        return DIF_Net
     else:
         raise NotImplementedError("Unknown network type!")
 

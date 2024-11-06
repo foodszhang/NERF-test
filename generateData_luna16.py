@@ -45,11 +45,19 @@ def main():
     dataFolder = args.dataFolder
     outputName = args.outputName
     outputFolder = args.outputFolder
-    matPath = f"./dataGenerator/{dataFolder}/{dataType}/img.mat"
+    #matPath = f"./dataGenerator/{dataFolder}/{dataType}/img.mat"
+    matPath = f"./data/1.3.6.1.4.1.14519.5.2.1.6279.6001.129055977637338639741695800950.mhd"
     configPath = f"./dataGenerator/{dataFolder}/{dataType}/config_256.yml"
     outputPath = osp.join(outputFolder, f"{outputName}.pickle")
-    multi_gen('./data/', configPath, dataFolder, outputPath, dataType, show=True)
+    #multi_gen('./data/', configPath, dataFolder, outputPath, dataType, show=True)
+    data = generator(matPath, configPath, dataFolder, dataType, 0, show=True)
 
+    outputDir = osp.join(outputFolder, f"{dataType}")
+    os.makedirs(outputDir, exist_ok=True)
+    outputPath = osp.join(outputDir, f"data.pickle")
+    with open(outputPath, "wb") as handle:
+        pickle.dump(data, handle, pickle.HIGHEST_PROTOCOL)
+    #gen_image_block(data['image'], outputDir)
 
 
 # %% Geometry
@@ -120,7 +128,7 @@ def convert_to_attenuation(data: np.array, rescale_slope: float, rescale_interce
 
 
 
-def loadImage(dirname, nVoxels, convert, rescale_slope, rescale_intercept, normalize=True, normalize_window=[-1000, 3000]):
+def loadImage(dirname, nVoxels, convert, rescale_slope, rescale_intercept, normalize=True, normalize_window=[-400, 500]):
     """
     Load CT image.
     """
@@ -233,7 +241,7 @@ def generator(matPath, configPath, dataFolder, dataType, index_num,show=False):
         data["train"]["projections"] = noise_projections
     else:
         data["train"]["projections"] = projections
-
+    print('4234234', data['train']['projections'].max(), data['train']['projections'].min())
     # Generate validation images
     data["val"] = {"angles": np.sort(np.random.rand(data["numVal"]) * 180 / 180 * np.pi) + data["startAngle"]/ 180 * np.pi}
     projections = tigre.Ax(np.transpose(img, (2, 1, 0))
@@ -260,7 +268,7 @@ def generator(matPath, configPath, dataFolder, dataType, index_num,show=False):
             data["val"]["projections"]: 50, 512, 512
         '''
 
-        show_step = 5
+        show_step = 1
         show_num = data["train"]["projections"].shape[0] // show_step
         show_image_train_ct = img[...,::show_step]
         show_dir_train_proj = data["train"]["projections"][::show_step,...]
