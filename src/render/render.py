@@ -2,7 +2,25 @@ import torch
 import torch.nn as nn
 from pdb import set_trace as stx
 from tqdm import tqdm
+import numpy as np
 
+def coord_to_dif(points):
+    return ((points  + 0.1275) / (0.1275+0.1275) * 2) - 1
+
+#TODO: HARD CODE
+def index_3d(image, uv):
+    # feat: [D, H, W]
+    # uv: [N, 3]
+    #uv = uv.reshape(1, *uv.shape) # [1, B, N, 3]
+    image = image.unsqueeze(0) # [1, D, H, W]
+    image = image.unsqueeze(0) # [1, D, H, W]
+    uv = uv.unsqueeze(0) # [B, N, 1, 3]
+    uv = uv.unsqueeze(2) # [B, N, 1, 3]
+    uv = uv.unsqueeze(2) # [B, N, 1, 3]
+    uv = coord_to_dif(uv) # [B, N, 1, 3]
+    #image = image.transpose(2, 3) # [W, H]
+    samples = torch.nn.functional.grid_sample(image, uv, align_corners=True) # [B, C, N, 1]
+    return samples[0, 0, :, :,0] # [B, C, N]
 
 def render(rays, net, net_fine, n_samples, n_fine, perturb, netchunk, raw_noise_std):
     n_rays = rays.shape[0]
@@ -79,6 +97,11 @@ def run_network(inputs, fn, netchunk):
     # if uvt_flat.shape[0] > netchunk:
     #     stx()
     # stx()
+    #print('qqqqqq', index_3d(fn.pre_image, uvt_flat).shape)
+    #print('qqqqqq', index_3d(fn.pre_image, uvt_flat))
+
+
+
     out_flat = torch.cat([fn(uvt_flat[i:i + netchunk]) for i in range(0, uvt_flat.shape[0], netchunk)], 0)
     out = out_flat.reshape(list(inputs.shape[:-1]) + [out_flat.shape[-1]])  # 还原成 input 的 shape
     return out

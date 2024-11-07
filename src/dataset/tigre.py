@@ -97,9 +97,8 @@ class TIGREDataset(Dataset):
         self.type = type
         self.n_rays = n_rays
         self.near, self.far = self.get_near_far(self.geo)
-        self.voxels = self.get_voxels(self.geo)
-        self.total_points = self.coord_to_dif(self.voxels)
-        self.voxels = torch.tensor(self.voxels)
+        self.voxels = torch.tensor(self.get_voxels(self.geo), dtype=torch.float32, device=device)    # [128, 128, 128, 3]
+        #self.total_points = self.coord_to_dif(self.voxels)
         angles = []
 
         if type == "train":
@@ -136,25 +135,25 @@ class TIGREDataset(Dataset):
             self.image = torch.tensor(data["image"], dtype=torch.float32, device=device)
             # stx()
         
-        self.total_points = self.total_points.reshape(3, -1)
-        self.total_points = self.total_points.transpose(1, 0) # N, 3
-        self.total_points[:, :2] -= 0.5 # [-0.5, 0.5]
-        self.total_points[:, 2] = 0.5 - self.total_points[:, 2] # [-0.5, 0.5]
-        self.total_points *= 2 # => [-1, 1]
+        #self.total_points = self.total_points.reshape(3, -1)
+        #self.total_points = self.total_points.transpose(1, 0) # N, 3
+        #self.total_points[:, :2] -= 0.5 # [-0.5, 0.5]
+        #self.total_points[:, 2] = 0.5 - self.total_points[:, 2] # [-0.5, 0.5]
+        #self.total_points *= 2 # => [-1, 1]
 
 
-        proj_points = []
-        self.total_points = torch.tensor(self.total_points, dtype=torch.float32, device=device)
-        for a in angles:
-            p = self.geo.project(self.total_points, a)
-            proj_points.append(p)
-        proj_points = torch.stack(proj_points, axis=0) # M, N, 2
-        self.angles = angles
-        self.total_proj_points = torch.tensor(proj_points, dtype=torch.float32, device=device)
-        self.total_points = self.total_points.reshape(1, *self.total_points.shape)
-        self.total_proj_points = self.total_proj_points.reshape(1, *self.total_proj_points.shape)
-        self.total_proj_points = self.total_proj_points.data.cpu()
-        self.total_points = self.total_points.data.cpu()
+        #proj_points = []
+        #self.total_points = torch.tensor(self.total_points, dtype=torch.float32, device=device)
+        #for a in angles:
+        #    p = self.geo.project(self.total_points, a)
+        #    proj_points.append(p)
+        #proj_points = torch.stack(proj_points, axis=0) # M, N, 2
+        #self.angles = angles
+        #self.total_proj_points = torch.tensor(proj_points, dtype=torch.float32, device=device)
+        #self.total_points = self.total_points.reshape(1, *self.total_points.shape)
+        #self.total_proj_points = self.total_proj_points.reshape(1, *self.total_proj_points.shape)
+        #self.total_proj_points = self.total_proj_points.data.cpu()
+        #self.total_points = self.total_points.data.cpu()
 
     def __len__(self):
         return self.n_samples

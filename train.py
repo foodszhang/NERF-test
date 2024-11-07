@@ -7,6 +7,24 @@ from tqdm import tqdm
 import argparse
 import skimage as ski
 
+def coord_to_dif(points):
+    return ((points  + 0.1275) / (0.1275+0.1275) * 2) - 1
+
+#TODO: HARD CODE
+def index_3d(image, uv):
+    # feat: [D, H, W]
+    # uv: [N, 3]
+    #uv = uv.reshape(1, *uv.shape) # [1, B, N, 3]
+    image = image.unsqueeze(0) # [1, D, H, W]
+    image = image.unsqueeze(0) # [1, D, H, W]
+    uv = uv.unsqueeze(0) # [B, N, 1, 3]
+    uv = uv.unsqueeze(2) # [B, N, 1, 3]
+    uv = uv.unsqueeze(2) # [B, N, 1, 3]
+    uv = coord_to_dif(uv) # [B, N, 1, 3]
+    #image = image.transpose(2, 3) # [W, H]
+    samples = torch.nn.functional.grid_sample(image, uv, align_corners=True) # [B, C, N, 1]
+    return samples[0, 0, :, :,0] # [B, C, N]
+
 
 def config_parser():
     parser = argparse.ArgumentParser()
@@ -55,7 +73,7 @@ class BasicTrainer(Trainer):
 
         
         projs = data["projs"].reshape(-1)           # projection 的 ground truth [1, 1024] -> [1024]
-        ret = render(rays, self.net, self.dif_net,self.net_fine, **self.conf["render"])
+        ret = render(rays, self.net, self.net_fine, **self.conf["render"])
         # stx()
         projs_pred = ret["acc"]
         loss = {"loss": 0.}
@@ -65,6 +83,28 @@ class BasicTrainer(Trainer):
             self.writer.add_scalar(f"train/{ls}", loss[ls].item(), global_step)
 
         return loss["loss"]
+
+    def sample_points(self, points):
+        choice = np.random.choice(len(points), size=50000, replace=False)
+        points = points[choice]
+        return points
+
+    #def compute_loss(self, data, global_step, idx_epoch):
+    #    points = self.eval_dset.voxels.reshape(-1, 3)
+    #    points = self.sample_points(points)
+
+    #    image_pred = run_network(
+    #        points, self.net_fine if self.net_fine is not None else self.net, self.netchunk)
+    #    #image_pred = image_pred.squeeze()
+    #    image = index_3d(self.net.pre_image, points)
+    #    loss = {"loss": 0.}
+    #    calc_mse_loss(loss, image_pred, image)
+    #    for ls in loss.keys():
+    #        self.writer.add_scalar(f"train/{ls}", loss[ls].item(), global_step)
+
+    #    return loss["loss"]
+
+    #    # stx()
 
     def eval_step(self, global_step, idx_epoch):
         """

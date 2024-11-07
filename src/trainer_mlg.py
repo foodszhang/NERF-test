@@ -16,6 +16,12 @@ import datetime
 from .network import get_network
 from .encoder import get_encoder
 from pdb import set_trace as stx
+import SimpleITK as sitk
+
+def read_nifti(path):
+    itk_img = sitk.ReadImage(path)
+    image = sitk.GetArrayFromImage(itk_img)
+    return image
 
 
 class Trainer:
@@ -62,6 +68,11 @@ class Trainer:
         self.eval_dset = Dataset(cfg["exp"]["datadir"], cfg["train"]["n_rays"], "val", device) if self.i_eval > 0 else None
         self.train_dloader = torch.utils.data.DataLoader(train_dset, batch_size=cfg["train"]["n_batch"]) # 官方的 data_loader 的作用知识分一个batch
         self.voxels = self.eval_dset.voxels if self.i_eval > 0 else None
+
+        voxel_path = f'./data/dif.nii.gz'
+        self.pre_image = read_nifti(voxel_path)
+        self.pre_image = self.pre_image.transpose(2,1,0)
+        self.pre_image = torch.tensor(self.pre_image, dtype=torch.float32).to(device)
     
         # Network，实例化网络
         network = get_network(cfg["network"]["net_type"])
@@ -69,6 +80,7 @@ class Trainer:
         encoder = get_encoder(**cfg["encoder"])
         self.net = network(encoder, **cfg["network"]).to(device)
         grad_vars = list(self.net.parameters())
+        self.net.pre_image = self.pre_image
         self.net_fine = None
         if self.n_fine > 0:
             self.net_fine = network(encoder, **cfg["network"]).to(device)

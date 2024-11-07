@@ -15,7 +15,12 @@ import datetime
 from .network import get_network
 from .encoder import get_encoder
 from pdb import set_trace as stx
+import SimpleITK as sitk
 
+def read_nifti(path):
+    itk_img = sitk.ReadImage(path)
+    image = sitk.GetArrayFromImage(itk_img)
+    return image
 
 class Trainer:
     def __init__(self, cfg, device="cuda"):
@@ -43,21 +48,24 @@ class Trainer:
         self.evaldir = osp.join(self.expdir, "eval")
         os.makedirs(self.evaldir, exist_ok=True)
         self.logger = gen_log(self.expdir)
-        #self.pretrained = './pretrained/luna16_simple_90_ckpt_best.tar'
-        self.pretrained = None
-        ckpt_path = f'./pretrained/dif.pth'
-        ckpt = torch.load(ckpt_path)
-        print('load ckpt from', ckpt_path)
-        #TODO: HARD CODE 
-        dif_model = get_network('dif')(
-            num_views=10,
-            combine='mlp'
-        )
-        dif_model.load_state_dict(ckpt)
-        dif_model = dif_model
-        #预训练好的，无需再训练
-        dif_model.eval()
-
+        self.pretrained = './pretrained/ckpt.tar'
+        #self.pretrained = None
+        #ckpt_path = f'./pretrained/dif.pth'
+        #ckpt = torch.load(ckpt_path)
+        #print('load ckpt from', ckpt_path)
+        ##TODO: HARD CODE 
+        #dif_model = get_network('dif')(
+        #    num_views=10,
+        #    combine='mlp'
+        #)
+        #dif_model.load_state_dict(ckpt)
+        #dif_model = dif_model
+        ##预训练好的，无需再训练
+        #dif_model.eval()
+        voxel_path = f'./data/dif.nii.gz'
+        self.pre_image = read_nifti(voxel_path)
+        self.pre_image = self.pre_image.transpose(2,1,0)
+        self.pre_image = torch.tensor(self.pre_image, dtype=torch.float32).to(device)
 
         # Dataset，读数据，dataloader
         '''
@@ -67,6 +75,8 @@ class Trainer:
         self.eval_dset = Dataset(cfg["exp"]["datadir"], cfg["train"]["n_rays"], "val", device) if self.i_eval > 0 else None
         # stx()
         self.train_dloader = torch.utils.data.DataLoader(train_dset, batch_size=cfg["train"]["n_batch"]) # 官方的 data_loader 的作用知识分一个batch
+        #print('434234234qqqq', self.eval_dset.voxels.max(), self.eval_dset.voxels.min(). self.eval_dset.voxels.shape)
+
         self.voxels = self.eval_dset.voxels if self.i_eval > 0 else None
     
         # Network，实例化网络
@@ -76,11 +86,13 @@ class Trainer:
         # stx()
         self.net = network(encoder, **cfg["network"]).to(device)
         grad_vars = list(self.net.parameters())
+        ####TODO:
+        self.net.pre_image = self.pre_image
                 # -- collect data
-        angles = np.array(train_dset.angles, dtype=float) # ~[0, +pi]
-        angles = angles / np.pi * 2 - 1 # => [-1, 1]
-        shape = train_dset.projs.shape
-        shape = 1, shape[0], 1, shape[1], shape[2]
+        #angles = np.array(train_dset.angles, dtype=float) # ~[0, +pi]
+        #angles = angles / np.pi * 2 - 1 # => [-1, 1]
+        #shape = train_dset.projs.shape
+        #shape = 1, shape[0], 1, shape[1], shape[2]
 
         #train_data_dict = {
         #    'points': train_dset.total_points,           # 3D points
@@ -88,17 +100,17 @@ class Trainer:
         #    'proj_points': train_dset.total_proj_points, # projected points
         #    'projs': train_dset.projs.reshape(shape).data.cpu(),             # 2D projections
         #}
-        val_data_dict = {
-            'points': self.eval_dset.total_points,           # 3D points
-            'angles': angles[:, None],  # angles
-            'proj_points': self.eval_dset.total_proj_points, # projected points
-            'projs': self.eval_dset.projs.reshape(shape).data.cpu(),             # 2D projections
-        }
+        #val_data_dict = {
+        #    'points': self.eval_dset.total_points,           # 3D points
+        #    'angles': angles[:, None],  # angles
+        #    'proj_points': self.eval_dset.total_proj_points, # projected points
+        #    'projs': self.eval_dset.projs.reshape(shape).data.cpu(),             # 2D projections
+        #}
 
 
 
         #self.train_voxel = dif_model(train_data_dict, is_eval=True)
-        self.eval_voxel = dif_model(val_data_dict, is_eval=True)
+        #self.eval_voxel = dif_model(val_data_dict, is_eval=True)
         print('fine')
         self.net_fine = None
         if self.n_fine > 0:

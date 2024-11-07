@@ -51,15 +51,15 @@ encoder:
   #encoding: sphere_harmonics
   #encoding: tiledgrid
 render:
-  n_samples: 512    
+  n_samples: 1024
   n_fine: 0         
   perturb: True
   raw_noise_std: 0.
   netchunk: 409600  # batchsize of points
 train:
-  epoch: 200
+  epoch: 1000
   n_batch: 1
-  n_rays: 512
+  n_rays: 2048
   lrate: 0.001
   lrate_gamma: 0.1
   lrate_step: 1500

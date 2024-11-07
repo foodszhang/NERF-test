@@ -6,6 +6,11 @@ from tqdm import tqdm
 import numpy as np
 import argparse
 
+def read_nifti(path):
+    itk_img = sitk.ReadImage(path)
+    image = sitk.GetArrayFromImage(itk_img)
+    return image
+
 def config_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default=f"./config/Lineformer/luna16_50_simple.yaml", help="configs file path")
@@ -117,36 +122,36 @@ class BasicTrainer(Trainer):
         show_density = torch.concat(show, dim=1)
 
         # cast_to_image -> 转成 numpy并多加一个维度
-        self.writer.add_image("eval/density (row1: gt, row2: pred)", cast_to_image(show_density), global_step, dataformats="HWC")
+        #self.writer.add_image("eval/density (row1: gt, row2: pred)", cast_to_image(show_density), global_step, dataformats="HWC")
 
-        proj_pred_origin_dir = osp.join(self.expdir, "proj_pred_origin")
-        proj_gt_origin_dir = osp.join(self.expdir, "proj_gt_origin")
-        proj_pred_dir = osp.join(self.expdir, "proj_pred")
-        proj_gt_dir = osp.join(self.expdir, "proj_gt")
-        # os.makedirs(eval_save_dir, exist_ok=True)
-        os.makedirs(proj_pred_origin_dir, exist_ok=True)
-        os.makedirs(proj_gt_origin_dir, exist_ok=True)
-        os.makedirs(proj_pred_dir, exist_ok=True)
-        os.makedirs(proj_gt_dir, exist_ok=True)
+        #proj_pred_origin_dir = osp.join(self.expdir, "proj_pred_origin")
+        #proj_gt_origin_dir = osp.join(self.expdir, "proj_gt_origin")
+        #proj_pred_dir = osp.join(self.expdir, "proj_pred")
+        #proj_gt_dir = osp.join(self.expdir, "proj_gt")
+        ## os.makedirs(eval_save_dir, exist_ok=True)
+        #os.makedirs(proj_pred_origin_dir, exist_ok=True)
+        #os.makedirs(proj_gt_origin_dir, exist_ok=True)
+        #os.makedirs(proj_pred_dir, exist_ok=True)
+        #os.makedirs(proj_gt_dir, exist_ok=True)
 
-        for i in tqdm(range(N)):
-            '''
-                cast_to_image 自带了归一化, 1 - 放在外边
-            '''
-            iio.imwrite(osp.join(proj_pred_origin_dir, f"proj_pred_{str(i)}.png"), (cast_to_image(projs_pred[i])*255).astype(np.uint8))
-            iio.imwrite(osp.join(proj_gt_origin_dir, f"proj_gt_{str(i)}.png"), (cast_to_image(projs[i])*255).astype(np.uint8))
-            iio.imwrite(osp.join(proj_pred_dir, f"proj_pred_{str(i)}.png"), ((1-cast_to_image(projs_pred[i]))*255).astype(np.uint8))
-            iio.imwrite(osp.join(proj_gt_dir, f"proj_gt_{str(i)}.png"), ((1-cast_to_image(1-projs[i]))*255).astype(np.uint8))
+        #for i in tqdm(range(N)):
+        #    '''
+        #        cast_to_image 自带了归一化, 1 - 放在外边
+        #    '''
+        #    iio.imwrite(osp.join(proj_pred_origin_dir, f"proj_pred_{str(i)}.png"), (cast_to_image(projs_pred[i])*255).astype(np.uint8))
+        #    iio.imwrite(osp.join(proj_gt_origin_dir, f"proj_gt_{str(i)}.png"), (cast_to_image(projs[i])*255).astype(np.uint8))
+        #    iio.imwrite(osp.join(proj_pred_dir, f"proj_pred_{str(i)}.png"), ((1-cast_to_image(projs_pred[i]))*255).astype(np.uint8))
+        #    iio.imwrite(osp.join(proj_gt_dir, f"proj_gt_{str(i)}.png"), ((1-cast_to_image(1-projs[i]))*255).astype(np.uint8))
 
-        for ls in loss.keys():
-            self.writer.add_scalar(f"eval/{ls}", loss[ls], global_step)
-            
+        #for ls in loss.keys():
+        #    self.writer.add_scalar(f"eval/{ls}", loss[ls], global_step)
+        #    
         # Save
         # 保存各种视图
         eval_save_dir = osp.join(self.evaldir, f"epoch_{idx_epoch:05d}")
         os.makedirs(eval_save_dir, exist_ok=True)
-        np.save(osp.join(eval_save_dir, "image_pred.npy"), image_pred.cpu().detach().numpy())
-        np.save(osp.join(eval_save_dir, "image_gt.npy"), image.cpu().detach().numpy())
+        #np.save(osp.join(eval_save_dir, "image_pred.npy"), image_pred.cpu().detach().numpy())
+        #np.save(osp.join(eval_save_dir, "image_gt.npy"), image.cpu().detach().numpy())
         iio.imwrite(osp.join(eval_save_dir, "slice_show_row1_gt_row2_pred.png"), (cast_to_image(show_density)*255).astype(np.uint8))
         with open(osp.join(eval_save_dir, "stats.txt"), "w") as f: 
             for key, value in loss.items(): 
