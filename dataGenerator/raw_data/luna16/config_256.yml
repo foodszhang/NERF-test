@@ -13,8 +13,8 @@ nDetector: # Number of pixels              (px)
 - 256
 - 256
 dDetector: # Size of each pixel            (mm)
-- 2
-- 2
+- 1.5
+- 1.5
 
 # Image parameters
 nVoxel: # Number of voxels              (vx)
