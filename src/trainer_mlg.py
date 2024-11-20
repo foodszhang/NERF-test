@@ -50,6 +50,8 @@ class Trainer:
         self.evaldir = osp.join(self.expdir, "eval")
         os.makedirs(self.evaldir, exist_ok=True)
         self.logger = gen_log(self.expdir)
+        self.pretrained = './pretrained/ckpt.tar'
+        #self.pretrained = None
 
         # Dataset，读数据，dataloader
         '''
@@ -100,6 +102,13 @@ class Trainer:
 
         # Load checkpoints
         self.epoch_start = 0
+
+        if self.pretrained:
+            print(f"Load checkpoints from {self.ckptdir}.")
+            ckpt = torch.load(self.pretrained)
+            self.optimizer.load_state_dict(ckpt["optimizer"])
+            self.global_step = self.epoch_start * len(self.train_dloader)
+            self.net.load_state_dict(ckpt["network"])
         if cfg["train"]["resume"] and osp.exists(self.ckptdir):
             print(f"Load checkpoints from {self.ckptdir}.")
             ckpt = torch.load(self.ckptdir)

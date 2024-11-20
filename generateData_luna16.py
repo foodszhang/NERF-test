@@ -27,14 +27,16 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 def config_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--ctName", default="luna16", type=str,
-                        help="Name of CT")
-    parser.add_argument("--outputName", default="luna16_50_256", type=str,
-                        help="Name of output data")
-    parser.add_argument("--dataFolder", default="raw_data", type=str,
-                        help="folder of raw data")
-    parser.add_argument("--outputFolder", default="./data", type=str,
-                        help="folder of output data")
+    parser.add_argument("--ctName", default="luna16", type=str, help="Name of CT")
+    parser.add_argument(
+        "--outputName", default="luna16_50_256", type=str, help="Name of output data"
+    )
+    parser.add_argument(
+        "--dataFolder", default="raw_data", type=str, help="folder of raw data"
+    )
+    parser.add_argument(
+        "--outputFolder", default="./data", type=str, help="folder of output data"
+    )
     return parser
 
 
@@ -45,11 +47,13 @@ def main():
     dataFolder = args.dataFolder
     outputName = args.outputName
     outputFolder = args.outputFolder
-    #matPath = f"./dataGenerator/{dataFolder}/{dataType}/img.mat"
-    matPath = f"./data/1.3.6.1.4.1.14519.5.2.1.6279.6001.129055977637338639741695800950.mhd"
+    # matPath = f"./dataGenerator/{dataFolder}/{dataType}/img.mat"
+    matPath = (
+        f"./data/1.3.6.1.4.1.14519.5.2.1.6279.6001.129055977637338639741695800950.mhd"
+    )
     configPath = f"./dataGenerator/{dataFolder}/{dataType}/config_256.yml"
     outputPath = osp.join(outputFolder, f"{outputName}.pickle")
-    #multi_gen('./data/', configPath, dataFolder, outputPath, dataType, show=True)
+    # multi_gen('./data/', configPath, dataFolder, outputPath, dataType, show=True)
     data = generator(matPath, configPath, dataFolder, dataType, 0, show=True)
 
     outputDir = osp.join(outputFolder, f"{dataType}")
@@ -57,7 +61,7 @@ def main():
     outputPath = osp.join(outputDir, f"data.pickle")
     with open(outputPath, "wb") as handle:
         pickle.dump(data, handle, pickle.HIGHEST_PROTOCOL)
-    #gen_image_block(data['image'], outputDir)
+    # gen_image_block(data['image'], outputDir)
 
 
 # %% Geometry
@@ -74,31 +78,49 @@ class ConeGeometry_special(Geometry):
         self.DSD = data["DSD"] / 1000  # Distance Source Detector      (m)
         self.DSO = data["DSO"] / 1000  # Distance Source Origin        (m)
         # Detector parameters
-        self.nDetector = np.array(data["nDetector"])  # number of pixels              (px)
-        self.dDetector = np.array(data["dDetector"]) / 1000  # size of each pixel            (m)
-        self.sDetector = self.nDetector * self.dDetector  # total size of the detector    (m)
+        self.nDetector = np.array(
+            data["nDetector"]
+        )  # number of pixels              (px)
+        self.dDetector = (
+            np.array(data["dDetector"]) / 1000
+        )  # size of each pixel            (m)
+        self.sDetector = (
+            self.nDetector * self.dDetector
+        )  # total size of the detector    (m)
         # Image parameters
-        self.nVoxel = np.array(data["nVoxel"][::-1])  # number of voxels              (vx)
-        self.dVoxel = np.array(data["dVoxel"][::-1]) / 1000  # size of each voxel            (m)
+        self.nVoxel = np.array(
+            data["nVoxel"][::-1]
+        )  # number of voxels              (vx)
+        self.dVoxel = (
+            np.array(data["dVoxel"][::-1]) / 1000
+        )  # size of each voxel            (m)
         self.sVoxel = self.nVoxel * self.dVoxel  # total size of the image       (m)
 
         # Offsets
-        self.offOrigin = np.array(data["offOrigin"][::-1]) / 1000  # Offset of image from origin   (m)
-        self.offDetector = np.array(
-            [data["offDetector"][1], data["offDetector"][0], 0]) / 1000  # Offset of Detector            (m)
+        self.offOrigin = (
+            np.array(data["offOrigin"][::-1]) / 1000
+        )  # Offset of image from origin   (m)
+        self.offDetector = (
+            np.array([data["offDetector"][1], data["offDetector"][0], 0]) / 1000
+        )  # Offset of Detector            (m)
 
         # Auxiliary
-        self.accuracy = data["accuracy"]  # Accuracy of FWD proj          (vx/sample)  # noqa: E501
+        self.accuracy = data[
+            "accuracy"
+        ]  # Accuracy of FWD proj          (vx/sample)  # noqa: E501
         # Mode
         self.mode = data["mode"]  # parallel, cone                ...
         self.filter = data["filter"]
 
 
-
-'''
+"""
     将 HU 装换成 attenuation
-'''
-def convert_to_attenuation(data: np.array, rescale_slope: float, rescale_intercept: float):
+"""
+
+
+def convert_to_attenuation(
+    data: np.array, rescale_slope: float, rescale_intercept: float
+):
     """
     CT scan is measured using Hounsfield units (HU). We need to convert it to attenuation.
 
@@ -127,8 +149,15 @@ def convert_to_attenuation(data: np.array, rescale_slope: float, rescale_interce
     return mu
 
 
-
-def loadImage(dirname, nVoxels, convert, rescale_slope, rescale_intercept, normalize=True, normalize_window=[-400, 500]):
+def loadImage(
+    dirname,
+    nVoxels,
+    convert,
+    rescale_slope,
+    rescale_intercept,
+    normalize=True,
+    normalize_window=[-400, 500],
+):
     """
     Load CT image.
     """
@@ -136,20 +165,23 @@ def loadImage(dirname, nVoxels, convert, rescale_slope, rescale_intercept, norma
     if nVoxels is None:
         nVoxels = np.array((256, 256, 256))
 
-    #test_data = scipy.io.loadmat(dirname)       # 加载 img.mat 文件
+    # test_data = scipy.io.loadmat(dirname)       # 加载 img.mat 文件
     itk_image = sitk.ReadImage(dirname)
     test_data = sitk.GetArrayFromImage(itk_image)
     spacing = itk_image.GetSpacing()
     spacing = (spacing[2], spacing[1], spacing[0])
-
 
     # Loads data in F_CONTIGUOUS MODE (column major), convert to Row major
     image_ori = test_data.astype(np.float32)
     if convert:
         print("Convert from HU to attenuation")
         image = convert_to_attenuation(image_ori, rescale_slope, rescale_intercept)
-        normalize_window[0] = convert_to_attenuation(normalize_window[0], rescale_slope, rescale_intercept)
-        normalize_window[1] = convert_to_attenuation(normalize_window[1], rescale_slope, rescale_intercept)
+        normalize_window[0] = convert_to_attenuation(
+            normalize_window[0], rescale_slope, rescale_intercept
+        )
+        normalize_window[1] = convert_to_attenuation(
+            normalize_window[1], rescale_slope, rescale_intercept
+        )
     else:
         image = image_ori
 
@@ -159,12 +191,14 @@ def loadImage(dirname, nVoxels, convert, rescale_slope, rescale_intercept, norma
     zoom_y = nVoxels[1] / imageDim[1]
     zoom_z = nVoxels[2] / imageDim[2]
 
-    '''
+    """
         根据体素个数与图像维度的比值来进行缩放
-    '''
+    """
     if zoom_x != 1.0 or zoom_y != 1.0 or zoom_z != 1.0:
-        print(f"Resize ct image from {imageDim[0]}x{imageDim[1]}x{imageDim[2]} to "
-              f"{nVoxels[0]}x{nVoxels[1]}x{nVoxels[2]}")
+        print(
+            f"Resize ct image from {imageDim[0]}x{imageDim[1]}x{imageDim[2]} to "
+            f"{nVoxels[0]}x{nVoxels[1]}x{nVoxels[2]}"
+        )
         image = scipy.ndimage.interpolation.zoom(
             image, (zoom_x, zoom_y, zoom_z), order=3, prefilter=False
         )
@@ -176,39 +210,17 @@ def loadImage(dirname, nVoxels, convert, rescale_slope, rescale_intercept, norma
         print(f"Normalize window to {normalize_window}")
         image = np.clip(image, normalize_window[0], normalize_window[1])
         image_min, image_max = normalize_window
-    print("Range of CT image is [%f, %f], mean: %f" % (image_min, image_max, image_mean))
-    if normalize and image_min !=0 and image_max != 1:
+    print(
+        "Range of CT image is [%f, %f], mean: %f" % (image_min, image_max, image_mean)
+    )
+    if normalize and image_min != 0 and image_max != 1:
         print("Normalize range to [0, 1]")
         image = (image - image_min) / (image_max - image_min)
         # stx()
     return image
 
-def generate_blocks():
-    block_list = []
-    base = np.mgrid[:64, :64, :64] * 4 # 3, 64 ^ 3
-    base = base.reshape(3, -1)
-    for x in range(4):
-        for y in range(4):
-            for z in range(4):
-                offset = np.array([x, y, z])
-                block = base + offset[:, None]
-                block_list.append(block)
-    return block_list
 
-def gen_image_block(image, save_dir):
-    block_list = generate_blocks()
-    blocks = np.stack(block_list, axis=0) # K, 3, N^3
-    blocks = blocks.transpose(0, 2, 1).astype(float) / 255 # K, N^3, 3
-    for k, block in enumerate(block_list):
-        block = block.reshape(3, -1).transpose(1, 0)
-        image_block = image[block[:, 0], block[:, 1], block[:, 2]]
-        np.save(os.path.join(save_dir, f'block_{k}.npy'), image_block)
-
-
-
-
-
-def generator(matPath, configPath, dataFolder, dataType, index_num,show=False):
+def generator(matPath, configPath, dataFolder, dataType, index_num, show=False):
     """
     Generate projections given CT image and configuration.
 
@@ -220,8 +232,14 @@ def generator(matPath, configPath, dataFolder, dataType, index_num,show=False):
 
     # Load CT image
     geo = ConeGeometry_special(data)
-    img = loadImage(matPath, data["nVoxel"], data["convert"],
-                    data["rescale_slope"], data["rescale_intercept"], data["normalize"])
+    img = loadImage(
+        matPath,
+        data["nVoxel"],
+        data["convert"],
+        data["rescale_slope"],
+        data["rescale_intercept"],
+        data["normalize"],
+    )
     img = np.transpose(img, (2, 1, 0))
     data["image"] = img.copy()
 
@@ -231,58 +249,100 @@ def generator(matPath, configPath, dataFolder, dataType, index_num,show=False):
 
     # Generate training images
     if data["randomAngle"] is False:
-        data["train"] = {"angles": np.linspace(0, data["totalAngle"] / 180 * np.pi, data["numTrain"]+1)[:-1] + data["startAngle"]/ 180 * np.pi}
+        data["train"] = {
+            "angles": np.linspace(
+                0, data["totalAngle"] / 180 * np.pi, data["numTrain"] + 1
+            )[:-1]
+            + data["startAngle"] / 180 * np.pi
+        }
     else:
-        data["train"] = {"angles": np.sort(np.random.rand(data["numTrain"]) * data["totalAngle"] / 180 * np.pi) + data["startAngle"]/ 180 * np.pi}
-    projections = tigre.Ax(np.transpose(img, (2,1,0)).copy(), geo, data["train"]["angles"])[:, ::-1, :]
+        data["train"] = {
+            "angles": np.sort(
+                np.random.rand(data["numTrain"]) * data["totalAngle"] / 180 * np.pi
+            )
+            + data["startAngle"] / 180 * np.pi
+        }
+    projections = tigre.Ax(
+        np.transpose(img, (2, 1, 0)).copy(), geo, data["train"]["angles"]
+    )[:, ::-1, :]
     if data["noise"] != 0 and data["normalize"]:
         print("Add noise to projections")
-        noise_projections = CTnoise.add(projections, Poisson=1e5, Gaussian=np.array([0, data["noise"]]))
+        noise_projections = CTnoise.add(
+            projections, Poisson=1e5, Gaussian=np.array([0, data["noise"]])
+        )
         data["train"]["projections"] = noise_projections
     else:
         data["train"]["projections"] = projections
-    print('4234234', data['train']['projections'].max(), data['train']['projections'].min())
     # Generate validation images
-    data["val"] = {"angles": np.sort(np.random.rand(data["numVal"]) * 180 / 180 * np.pi) + data["startAngle"]/ 180 * np.pi}
-    projections = tigre.Ax(np.transpose(img, (2, 1, 0))
-                           .copy(), geo, data["val"]["angles"])[:, ::-1, :]
+    data["val"] = {
+        "angles": np.sort(np.random.rand(data["numVal"]) * 180 / 180 * np.pi)
+        + data["startAngle"] / 180 * np.pi
+    }
+    # trans data["val"] to 256x256x256
+
+    projections = tigre.Ax(
+        np.transpose(img, (2, 1, 0)).copy(), geo, data["val"]["angles"]
+    )[:, ::-1, :]
     if data["noise"] != 0 and data["normalize"]:
         print("Add noise to projections")
-        noise_projections = CTnoise.add(projections, Poisson=1e5, Gaussian=np.array([0, data["noise"]]))
+        noise_projections = CTnoise.add(
+            projections, Poisson=1e5, Gaussian=np.array([0, data["noise"]])
+        )
         data["val"]["projections"] = noise_projections
     else:
         data["val"]["projections"] = projections
 
     if show or True:
-        save_dir_train_ct = osp.join('dataGenerator/', dataFolder, dataType, "show_vis_train_ct/")
-        save_dir_train_proj = osp.join('dataGenerator/', dataFolder, dataType, "show_vis_train_proj/")
-        save_dir_vali_proj = osp.join('dataGenerator/', dataFolder, dataType, "show_vis_vali_proj/")
+        save_dir_train_ct = osp.join(
+            "dataGenerator/", dataFolder, dataType, "show_vis_train_ct/"
+        )
+        save_dir_train_proj = osp.join(
+            "dataGenerator/", dataFolder, dataType, "show_vis_train_proj/"
+        )
+        save_dir_vali_proj = osp.join(
+            "dataGenerator/", dataFolder, dataType, "show_vis_vali_proj/"
+        )
 
         os.makedirs(save_dir_train_ct, exist_ok=True)
         os.makedirs(save_dir_train_proj, exist_ok=True)
         os.makedirs(save_dir_vali_proj, exist_ok=True)
         # stx()
-        '''
+        """
             img: [256, 256, 128]
             data["train"]["projections"]: 50, 512, 512
             data["val"]["projections"]: 50, 512, 512
-        '''
+        """
 
         show_step = 1
         show_num = data["train"]["projections"].shape[0] // show_step
-        show_image_train_ct = img[...,::show_step]
-        show_dir_train_proj = data["train"]["projections"][::show_step,...]
-        show_dir_vali_proj  = data["val"]["projections"][::show_step,...]
+        show_image_train_ct = img[..., ::show_step]
+        show_dir_train_proj = data["train"]["projections"][::show_step, ...]
+        show_dir_vali_proj = data["val"]["projections"][::show_step, ...]
         # show_image = np.concatenate(show_image, axis=0)
 
-        #stx()
+        # stx()
 
         for i in range(show_num):
-            iio.imwrite(save_dir_train_ct+f'CT_{index_num}_'+str(i)+'.png', (show_image_train_ct[...,i]*255/show_image_train_ct.max()).astype(np.uint8))
-            iio.imwrite(save_dir_train_proj+f'projs_{index_num}_'+str(i)+'.png', (show_dir_train_proj[i,...]*255/show_dir_train_proj.max()).astype(np.uint8))
-            iio.imwrite(save_dir_vali_proj+f'projs_{index_num}_'+str(i)+'.png', (show_dir_vali_proj[i,...]*255/show_dir_vali_proj.max()).astype(np.uint8))
+            iio.imwrite(
+                save_dir_train_ct + f"CT_{index_num}_" + str(i) + ".png",
+                (show_image_train_ct[..., i] * 255 / show_image_train_ct.max()).astype(
+                    np.uint8
+                ),
+            )
+            iio.imwrite(
+                save_dir_train_proj + f"projs_{index_num}_" + str(i) + ".png",
+                (show_dir_train_proj[i, ...] * 255 / show_dir_train_proj.max()).astype(
+                    np.uint8
+                ),
+            )
+            iio.imwrite(
+                save_dir_vali_proj + f"projs_{index_num}_" + str(i) + ".png",
+                (show_dir_vali_proj[i, ...] * 255 / show_dir_vali_proj.max()).astype(
+                    np.uint8
+                ),
+            )
 
-        #stx()
+        # stx()
         # print("Save ct image")
         # tigre.plotimg(img.transpose((2,0,1)), dim="z")
         # print("Save training images")
@@ -294,19 +354,19 @@ def generator(matPath, configPath, dataFolder, dataType, index_num,show=False):
     return data
 
 
-def multi_gen(dir_path, configPath,dataFolder,outputFolder,dataType, show=False):
+def multi_gen(dir_path, configPath, dataFolder, outputFolder, dataType, show=False):
     index = 0
     for file in os.listdir(dir_path):
         if file.endswith("mhd"):
             matPath = os.path.join(dir_path, file)
-            data = generator(matPath, configPath, dataFolder, dataType, index,show)
+            data = generator(matPath, configPath, dataFolder, dataType, index, show)
             index += 1
             outputDir = osp.join(outputFolder, f"{dataType}_{index}")
             os.makedirs(outputDir, exist_ok=True)
             outputPath = osp.join(outputDir, f"data.pickle")
             with open(outputPath, "wb") as handle:
                 pickle.dump(data, handle, pickle.HIGHEST_PROTOCOL)
-            gen_image_block(data['image'], outputDir)
+
 
 if __name__ == "__main__":
     main()

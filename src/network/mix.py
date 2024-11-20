@@ -5,16 +5,20 @@ import numpy as np
 
 from .unet import UNet
 from .point_classifier import SurfaceClassifier
-from .network import  DensityNetwork
+from .network import DensityNetwork
+
 
 def index_2d(feat, uv):
     # https://zhuanlan.zhihu.com/p/137271718
     # feat: [B, C, H, W]
     # uv: [B, N, 2]
-    uv = uv.unsqueeze(2) # [B, N, 1, 2]
-    feat = feat.transpose(2, 3) # [W, H]
-    samples = torch.nn.functional.grid_sample(feat, uv, align_corners=True) # [B, C, N, 1]
-    return samples[:, :, :, 0] # [B, C, N]
+    uv = uv.unsqueeze(2)  # [B, N, 1, 2]
+    feat = feat.transpose(2, 3)  # [W, H]
+    samples = torch.nn.functional.grid_sample(
+        feat, uv, align_corners=True
+    )  # [B, C, N, 1]
+    return samples[:, :, :, 0]  # [B, C, N]
+
 
 class MLP(nn.Module):
     def __init__(self, mlp_list, use_bn=False):
@@ -25,12 +29,58 @@ class MLP(nn.Module):
             layers += [nn.Conv2d(mlp_list[i], mlp_list[i + 1], kernel_size=1)]
             if use_bn:
                 layers += [nn.BatchNorm2d(mlp_list[i + 1])]
-            layers += [nn.LeakyReLU(inplace=True),]
-        
+            layers += [
+                nn.LeakyReLU(inplace=True),
+            ]
+
         self.layer = nn.Sequential(*layers)
 
     def forward(self, x):
         return self.layer(x)
+
+
+class MixNet(nn.Module):
+    def __init__(
+        self, dif_net, nerf_net, hidden_dim=256, num_layers=8, skips=[4], out_dim=1
+    ):
+        self.layers = nn.ModuleList(
+            [nn.Linear(2, hidden_dim)]
+            + [
+                (
+                    nn.Linear(hidden_dim, hidden_dim)
+                    if i not in skips
+                    else nn.Linear(hidden_dim + self.in_dim, hidden_dim)
+                )
+                for i in range(1, num_layers - 1, 1)
+            ]
+        )
+        self.layers.append(nn.Linear(hidden_dim, out_dim))
+        self.dif_net = dif_net
+        self.nerf_net = nerf_net
+
+        self.activations = nn.ModuleList(
+            [nn.LeakyReLU() for i in range(0, num_layers - 1, 1)]
+        )
+        self.activations.append(nn.LeakyReLU())
+
+    def forward(self, x):
+        x1 = self.dif_net(x)
+        x2 = self.nerf_net(x)
+        x = torch.cat([x1, x2], -1)
+        input_pts = x
+        for i in range(len(self.layers)):
+
+            linear = self.layers[i]
+            activation = self.activations[i]
+
+            if i in self.skips:
+                x = torch.cat([input_pts, x], -1)
+
+            x = linear(x)
+            x = activation(x)
+        return x
+
+        return x
 
 
 class DIF_Net(nn.Module):
@@ -40,34 +90,33 @@ class DIF_Net(nn.Module):
 
         self.image_encoder = UNet(1, mid_ch)
 
-        if self.combine == 'mlp':
+        if self.combine == "mlp":
             self.view_mixer = MLP([num_views, num_views // 2, 1])
-        
+
         self.point_classifier = SurfaceClassifier(
-            [mid_ch, 256, 64, 16, 1],
-            no_residual=False
+            [mid_ch, 256, 64, 16, 1], no_residual=False
         )
-        print(f'DIF_Net, mid_ch: {mid_ch}, combine: {self.combine}')
+        print(f"DIF_Net, mid_ch: {mid_ch}, combine: {self.combine}")
 
     def forward(self, data, is_eval=False, eval_npoint=100000):
         # projection encoding
-        projs = data['projs'] # B, M, C, W, H
+        projs = data["projs"]  # B, M, C, W, H
         b, m, c, w, h = projs.shape
-        projs = projs.reshape(b * m, c, w, h) # B', C, W, H
+        projs = projs.reshape(b * m, c, w, h)  # B', C, W, H
         proj_feats = self.image_encoder(projs)
         proj_feats = list(proj_feats) if type(proj_feats) is tuple else [proj_feats]
         for i in range(len(proj_feats)):
             _, c_, w_, h_ = proj_feats[i].shape
-            proj_feats[i] = proj_feats[i].reshape(b, m, c_, w_, h_) # B, M, C, W, H
+            proj_feats[i] = proj_feats[i].reshape(b, m, c_, w_, h_)  # B, M, C, W, H
 
         # point-wise forward
         if not is_eval:
             p_pred = self.forward_points(proj_feats, data)
-            p_gt = data['p_gt']
-            return p_pred, p_gt
-        
+            p_gt = data["p_gt"]
+            return p_pred
+
         else:
-            total_npoint = data['proj_points'].shape[2]
+            total_npoint = data["proj_points"].shape[2]
             n_batch = int(np.ceil(total_npoint / eval_npoint))
 
             pred_list = []
@@ -75,16 +124,17 @@ class DIF_Net(nn.Module):
                 left = i * eval_npoint
                 right = min((i + 1) * eval_npoint, total_npoint)
                 p_pred = self.forward_points(
-                    proj_feats, {
-                        'proj_points': data['proj_points'][..., left:right, :],
-                        'points': data['points'][..., left:right, :],
-                    }
-                ) # B, C, N
+                    proj_feats,
+                    {
+                        "proj_points": data["proj_points"][..., left:right, :],
+                        "points": data["points"][..., left:right, :],
+                    },
+                )  # B, C, N
                 pred_list.append(p_pred)
 
             pred = torch.cat(pred_list, dim=2)
             return pred
-    
+
     def forward_points(self, proj_feats, data):
         n_view = proj_feats[0].shape[1]
 
@@ -93,19 +143,19 @@ class DIF_Net(nn.Module):
         for i in range(n_view):
             f_list = []
             for proj_f in proj_feats:
-                feat = proj_f[:, i, ...] # B, C, W, H
-                p = data['proj_points'][:, i, ...] # B, N, 2
-                p_feats = index_2d(feat, p) # B, C, N
+                feat = proj_f[:, i, ...]  # B, C, W, H
+                p = data["proj_points"][:, i, ...]  # B, N, 2
+                p_feats = index_2d(feat, p)  # B, C, N
                 f_list.append(p_feats)
             p_feats = torch.cat(f_list, dim=1)
             p_list.append(p_feats)
-        p_feats = torch.stack(p_list, dim=-1) # B, C, N, M
+        p_feats = torch.stack(p_list, dim=-1)  # B, C, N, M
 
         # 2. cross-view fusion
-        if self.combine == 'max':
+        if self.combine == "max":
             p_feats = F.max_pool2d(p_feats, (1, n_view))
-            p_feats = p_feats.squeeze(-1) # B, C, N
-        elif self.combine == 'mlp':
+            p_feats = p_feats.squeeze(-1)  # B, C, N
+        elif self.combine == "mlp":
             p_feats = p_feats.permute(0, 3, 1, 2)
             p_feats = self.view_mixer(p_feats)
             p_feats = p_feats.squeeze(1)

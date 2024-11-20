@@ -67,42 +67,42 @@ class BasicTrainer(Trainer):
         super().__init__(cfg, 'cuda')
         print(f"[Start] exp: {cfg['exp']['expname']}, net: Basic network")
 
-    #def compute_loss(self, data, global_step, idx_epoch):
-    #    # stx()
-    #    rays = data["rays"].reshape(-1, 8)          # [1, 1024, 8] -> [1024, 8]
+    def compute_loss(self, data, global_step, idx_epoch):
+        # stx()
+        rays = data["rays"].reshape(-1, 8)          # [1, 1024, 8] -> [1024, 8]
 
-    #    
-    #    projs = data["projs"].reshape(-1)           # projection 的 ground truth [1, 1024] -> [1024]
-    #    ret = render(rays, self.net, self.net_fine, **self.conf["render"])
-    #    # stx()
-    #    projs_pred = ret["acc"]
-    #    loss = {"loss": 0.}
-    #    calc_mse_loss(loss, projs, projs_pred)
-    #    # Log
-    #    for ls in loss.keys():
-    #        self.writer.add_scalar(f"train/{ls}", loss[ls].item(), global_step)
+        
+        projs = data["projs"].reshape(-1)           # projection 的 ground truth [1, 1024] -> [1024]
+        ret = render(rays, self.net, self.net_fine, **self.conf["render"])
+        # stx()
+        projs_pred = ret["acc"]
+        loss = {"loss": 0.}
+        calc_mse_loss(loss, projs, projs_pred)
+        # Log
+        for ls in loss.keys():
+            self.writer.add_scalar(f"train/{ls}", loss[ls].item(), global_step)
 
-    #    return loss["loss"]
+        return loss["loss"]
 
     def sample_points(self, points):
         choice = np.random.choice(len(points), size=50000, replace=False)
         points = points[choice]
         return points
 
-    def compute_loss(self, data, global_step, idx_epoch):
-        points = self.eval_dset.voxels.reshape(-1, 3)
-        points = self.sample_points(points)
+    #def compute_loss(self, data, global_step, idx_epoch):
+    #    points = self.eval_dset.voxels.reshape(-1, 3)
+    #    points = self.sample_points(points)
 
-        image_pred = run_network(
-            points, self.net_fine if self.net_fine is not None else self.net, self.netchunk)
-        #image_pred = image_pred.squeeze()
-        image = index_3d(self.net.pre_image, points)
-        loss = {"loss": 0.}
-        calc_mse_loss(loss, image_pred, image)
-        for ls in loss.keys():
-            self.writer.add_scalar(f"train/{ls}", loss[ls].item(), global_step)
+    #    image_pred = run_network(
+    #        points, self.net_fine if self.net_fine is not None else self.net, self.netchunk)
+    #    #image_pred = image_pred.squeeze()
+    #    image = index_3d(self.net.pre_image, points)
+    #    loss = {"loss": 0.}
+    #    calc_mse_loss(loss, image_pred, image)
+    #    for ls in loss.keys():
+    #        self.writer.add_scalar(f"train/{ls}", loss[ls].item(), global_step)
 
-        return loss["loss"]
+    #    return loss["loss"]
 
     #    # stx()
 

@@ -48,8 +48,8 @@ class Trainer:
         self.evaldir = osp.join(self.expdir, "eval")
         os.makedirs(self.evaldir, exist_ok=True)
         self.logger = gen_log(self.expdir)
-        #self.pretrained = './pretrained/ckpt.tar'
-        self.pretrained = None
+        self.pretrained = './pretrained/ckpt.tar'
+        #self.pretrained = None
         #ckpt_path = f'./pretrained/dif.pth'
         #ckpt = torch.load(ckpt_path)
         #print('load ckpt from', ckpt_path)
