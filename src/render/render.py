@@ -57,6 +57,18 @@ def get_pts(rays, n_samples, perturb=None):
     return pts, z_vals, rays_o, rays_d
 
 
+def render_dif(data, raw, n_samples):
+    rays = data["rays"]
+    pts, z_vals, rays_o, rays_d = get_pts(rays, n_samples, None)
+    acc, weights = raw2outputs(raw, z_vals, rays_d)  # acc 和 weights 各自的含义是？
+    ret = {"acc": acc, "pts": pts, "raw": raw, "weights": weights}
+    for k in ret:
+        if torch.isnan(ret[k]).any() or torch.isinf(ret[k]).any():
+            print(f"! [Numerical Error] {k} contains nan or inf.")
+
+    return ret
+
+
 def render(rays, net, net_fine, n_samples, n_fine, perturb, netchunk, raw_noise_std):
     pts, z_vals, rays_o, rays_d = get_pts(rays, n_samples, perturb)
     # 此处的pts是在rays上的采样点

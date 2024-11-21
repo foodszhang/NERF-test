@@ -28,7 +28,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
 os.environ["CUDA_HOME"] = "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.3"
 
 from src.config.configloading import load_config
-from src.render import render, run_network, get_pts
+from src.render import render_dif, run_network, get_pts
 from src.multi_trainer import Trainer
 from src.loss import calc_mse_loss
 from src.utils import get_psnr, get_ssim, get_psnr_3d, get_ssim_3d, cast_to_image
@@ -64,6 +64,13 @@ class BasicTrainer(Trainer):
         image_pred = image_pred.reshape(-1)
         loss = {"loss": 0.0}
         calc_mse_loss(loss, image, image_pred)
+        image_pred = image_pred.reshape(10, -1)
+        for i in range(len(data["rays"].shape[0])):
+            rays = data["rays"][i].reshape(-1, 8)
+            ret = render_dif(rays, image_pred[i], self.conf["render"]["n_samples"])
+            projs_pred = ret["acc"]
+            projs = data["projs"][i]
+            calc_mse_loss(loss, projs, projs_pred)
 
         return loss["loss"]
 
