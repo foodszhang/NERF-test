@@ -71,7 +71,7 @@ class BasicTrainer(Trainer):
             projs_pred = ret["acc"]
 
             projs = data["projs"][0][i]
-            calc_mse_loss(loss, projs, projs_pred)
+            calc_mse_loss(loss, projs, projs_pred, 0.1)
 
         return loss["loss"]
 
