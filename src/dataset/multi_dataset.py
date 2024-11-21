@@ -307,52 +307,18 @@ class MultiTIGREDataset(Dataset):
             pts_list = []
             image_pts_list = []
             coords_list = []
-            for proj_num in range(self.n_views):
-                projs_valid = (projections[proj_num] > 0).flatten()
-                coords_valid = self.coords[
-                    projs_valid
-                ]  # [65536, 2] -> [40653, 2], 将布尔值矩阵当做索引，可能是因为并不是所有的
-                rays = self.rays[
-                    proj_num
-                ]  # self.rays: [50, 256, 256, 6], index 决定了取哪一个角度或样例，后两项决定了横纵坐标
-                projs = projections[proj_num]
-                pts, _, _, _ = get_pts(
-                    rays,
-                    self.n_samples,
-                )
-                pts, _, _, _ = get_pts(
-                    rays,
-                    10,
-                )
-                pts = pts.reshape(-1, 3)
-                q = coord_to_dif_base(pts)
-                cl = []
-                for other_proj_num in range(self.n_views):
-                    coords = self.geo.project(q, self.angles[other_proj_num])
-                    coords = torch.tensor(
-                        coords, dtype=torch.float32, device=self.device
-                    )
-                    cl.append(coords)
-                coords = torch.stack(cl, dim=0)
-                #
-                image_pts = index_3d(image, pts)
-                projs_list.append(projs)
-                rays_list.append(rays)
-                pts_list.append(pts)
-                image_pts_list.append(image_pts)
-                coords_list.append(coords)
-            image_pts = torch.stack(image_pts_list, dim=0)
-            pts = torch.stack(pts_list, dim=0)
-            rays = torch.stack(rays_list, dim=0)
-            projs = torch.stack(projs_list, dim=0)
-            coords = torch.stack(coords_list, dim=0)
-            coords = coords.permute(1, 0, 2, 3)
-            coords = coords.reshape(self.n_views, -1, 2)
+            pts = self.voxels.reshape(-1, 3)
+            q = coord_to_dif_base(pts)
+            cl = []
+            for other_proj_num in range(self.n_views):
+                coords = self.geo.project(q, self.angles[other_proj_num])
+                coords = torch.tensor(coords, dtype=torch.float32, device=self.device)
+                cl.append(coords)
+            coords = torch.stack(cl, dim=0)
             return {
-                "projs": projs,
-                "rays": rays,
+                "projs": projections,
                 "pts:": pts,
-                "image": image_pts,
+                "image": image,
                 "projections": projections,
                 "proj_pts": coords,
             }
