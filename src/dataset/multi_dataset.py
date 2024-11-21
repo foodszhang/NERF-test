@@ -3,7 +3,6 @@ import pickle
 import os
 import sys
 import numpy as np
-from functools import cache
 import json
 import yaml
 
@@ -362,7 +361,6 @@ class MultiTIGREDataset(Dataset):
 
     # 此处的 geo: ConeGeometry 表示什么？圆锥形几何
     # 冒号是类型建议符，告诉程序员希望传入的实参的类型
-    @cache
     def get_voxels(self, geo: ConeGeometry):
         """
         Get the voxels.
