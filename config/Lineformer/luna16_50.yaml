@@ -84,5 +84,5 @@ train:
   window_size: [8, 8]
   window_num: 16
 log:
-  i_eval: 50  # Epoch for evaluation
+  i_eval: 10  # Epoch for evaluation
   i_save: 100  # Epoch for saving

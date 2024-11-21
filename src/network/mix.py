@@ -115,7 +115,7 @@ class DIF_Net(nn.Module):
             proj_feats[i] = proj_feats[i].reshape(b, m, c_, w_, h_)  # B, M, C, W, H
 
         # point-wise forward
-        total_npoint = data["proj_pts"].shape[2] * data["proj_pts"].shape[3]
+        total_npoint = data["proj_pts"].shape[2]
         n_batch = int(np.ceil(total_npoint / eval_npoint))
 
         pred_list = []

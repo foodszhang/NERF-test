@@ -231,6 +231,7 @@ class MultiTIGREDataset(Dataset):
             projections = torch.tensor(
                 projections, dtype=torch.float32, device=self.device
             )
+            projections = projections * 10
             projs_list = []
             rays_list = []
             pts_list = []
@@ -280,7 +281,6 @@ class MultiTIGREDataset(Dataset):
             coords = torch.stack(coords_list, dim=0)
             coords = coords.permute(1, 0, 2, 3)
             coords = coords.reshape(self.n_views, -1, 2)
-            print("333333", coords.shape)
 
             return {
                 "projs": projs,
@@ -301,6 +301,7 @@ class MultiTIGREDataset(Dataset):
             projections = torch.tensor(
                 projections, dtype=torch.float32, device=self.device
             )
+            projections = projections * 10
             projs_list = []
             rays_list = []
             pts_list = []
@@ -347,7 +348,6 @@ class MultiTIGREDataset(Dataset):
             coords = torch.stack(coords_list, dim=0)
             coords = coords.permute(1, 0, 2, 3)
             coords = coords.reshape(self.n_views, -1, 2)
-            print("333333", coords.shape)
             return {
                 "projs": projs,
                 "rays": rays,
