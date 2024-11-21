@@ -15,7 +15,8 @@ from .utils import gen_log, time2file_name
 import datetime
 
 from .network import get_network
-from .encoder import get_encoder
+
+# from .encoder import get_encoder
 from pdb import set_trace as stx
 
 
@@ -49,10 +50,18 @@ class Trainer:
             eval 和 train dataset 并不相同
         """
         train_dataset = Dataset(
-            cfg["exp"]["train_datadir"], cfg["train"]["n_rays"], "train", device
+            cfg["exp"]["train_datadir"],
+            cfg["train"]["n_rays"],
+            cfg["train"]["n_samples"],
+            "train",
+            device,
         )  # 由dataset去构造数据集
         val_dataset = Dataset(
-            cfg["exp"]["eval_datadir"], cfg["train"]["n_rays"], "val", device
+            cfg["exp"]["eval_datadir"],
+            cfg["train"]["n_rays"],
+            cfg["train"]["n_samples"],
+            "val",
+            device,
         )  # 由val
         # stx()
         self.train_dloader = DataLoader(
@@ -65,12 +74,12 @@ class Trainer:
         # train_dataset, val_dataset = torch.utils.data.random_split(dataset, [110, 21])
 
         # Network，实例化网络
-        network = get_network(cfg["network"]["net_type"])
+        # network = get_network(cfg["network"]["net_type"])
         cfg["network"].pop("net_type", None)
-        encoder = get_encoder(**cfg["encoder"])
+        # encoder = get_encoder(**cfg["encoder"])
         # stx()
-        self.net = network(encoder, **cfg["network"]).to(device)
-        self.DIF_Net = get_network("dif")(10, "mlp").to(device)
+        # self.net = network(encoder, **cfg["network"]).to(device)
+        self.net = get_network("dif")(10, "mlp").to(device)
         grad_vars = list(self.net.parameters())
 
         # Optimizer，优化器及LR策略

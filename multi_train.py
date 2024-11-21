@@ -57,17 +57,13 @@ class BasicTrainer(Trainer):
     def compute_loss(self, data, global_step, idx_epoch):
         # stx()
         loss = {"loss": 0.0}
-        for d in data:
-            rays = d["rays"].reshape(-1, 8)  # [1, 1024, 8] -> [1024, 8]
-            projs = d["projs"].reshape(
-                -1
-            )  # projection 的 ground truth [1, 1024] -> [1024]
-            ret = render(rays, self.net, self.net_fine, **self.conf["render"])
-            # stx()
-            projs_pred = ret["acc"]
-
-            loss = {"loss": 0.0}
-            calc_mse_loss(loss, projs, projs_pred)
+        # stx()
+        image_pred = self.net(data)
+        image = data["image"]
+        image = image.reshape(-1)
+        image_pred = image_pred.reshape(-1)
+        loss = {"loss": 0.0}
+        calc_mse_loss(loss, image, image_pred)
 
         return loss["loss"]
 
@@ -77,12 +73,12 @@ class BasicTrainer(Trainer):
         """
         # Evaluate projection    渲染投射的 RGB 图
         loss = {
-            "proj_psnr": 0.0,
+            #"proj_psnr": 0.0,
             # "proj_ssim": get_ssim(projs_pred, projs),
             "psnr_3d": 0.0,
-            # "ssim_3d": get_ssim_3d(image_pred, image),
+             "ssim_3d": get_ssim_3d(image_pred, image),
         }
-        for index, d in enumerate(self.eval_dset):
+        for index, d in enumerate(self.):
             # TODO: assume batch size is 1
             image = d["image"][0]
             projs = d["projs"][0]  # [256, 256] -> [50, 256, 256]

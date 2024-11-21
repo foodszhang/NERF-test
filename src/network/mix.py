@@ -8,12 +8,17 @@ from .point_classifier import SurfaceClassifier
 from .network import DensityNetwork
 
 
+def coord_to_dif(points):
+    return ((points + 0.1275) / (0.1275 + 0.1275) * 2) - 1
+
+
 def index_2d(feat, uv):
     # https://zhuanlan.zhihu.com/p/137271718
     # feat: [B, C, H, W]
     # uv: [B, N, 2]
     uv = uv.unsqueeze(2)  # [B, N, 1, 2]
     feat = feat.transpose(2, 3)  # [W, H]
+    uv = coord_to_dif(uv)  # [B, N, 1, 3]
     samples = torch.nn.functional.grid_sample(
         feat, uv, align_corners=True
     )  # [B, C, N, 1]
@@ -98,11 +103,11 @@ class DIF_Net(nn.Module):
         )
         print(f"DIF_Net, mid_ch: {mid_ch}, combine: {self.combine}")
 
-    def forward(self, data, is_eval=False, eval_npoint=100000):
+    def forward(self, data, is_eval=False, eval_npoint=100000000):
         # projection encoding
-        projs = data["projs"]  # B, M, C, W, H
-        b, m, c, w, h = projs.shape
-        projs = projs.reshape(b * m, c, w, h)  # B', C, W, H
+        projs = data["projections"]  # B, M, C, W, H
+        b, m, w, h = projs.shape
+        projs = projs.reshape(b * m, 1, w, h)  # B', C, W, H
         proj_feats = self.image_encoder(projs)
         proj_feats = list(proj_feats) if type(proj_feats) is tuple else [proj_feats]
         for i in range(len(proj_feats)):
@@ -110,31 +115,30 @@ class DIF_Net(nn.Module):
             proj_feats[i] = proj_feats[i].reshape(b, m, c_, w_, h_)  # B, M, C, W, H
 
         # point-wise forward
-        if not is_eval:
-            p_pred = self.forward_points(proj_feats, data)
-            p_gt = data["p_gt"]
-            return p_pred
+        total_npoint = (
+            data["proj_pts"].shape[1]
+            * data["proj_pts"].shape[2]
+            * data["proj_pts"].shape[3]
+        )
+        n_batch = int(np.ceil(total_npoint / eval_npoint))
 
-        else:
-            total_npoint = data["proj_points"].shape[2]
-            n_batch = int(np.ceil(total_npoint / eval_npoint))
+        pred_list = []
+        for i in range(n_batch):
+            left = i * eval_npoint
+            right = min((i + 1) * eval_npoint, total_npoint)
+            p_pred = self.forward_points(
+                proj_feats,
+                {
+                    "proj_pts": data["proj_pts"][..., left:right, :],
+                },
+            )  # B, C, N
+            pred_list.append(p_pred)
 
-            pred_list = []
-            for i in range(n_batch):
-                left = i * eval_npoint
-                right = min((i + 1) * eval_npoint, total_npoint)
-                p_pred = self.forward_points(
-                    proj_feats,
-                    {
-                        "proj_points": data["proj_points"][..., left:right, :],
-                        "points": data["points"][..., left:right, :],
-                    },
-                )  # B, C, N
-                pred_list.append(p_pred)
+        pred = torch.cat(pred_list, dim=2)
+        return pred
 
-            pred = torch.cat(pred_list, dim=2)
-            return pred
-
+    # points -> (10. 1024x10, 3)
+    # proj -> (10, 1024x1, 2)
     def forward_points(self, proj_feats, data):
         n_view = proj_feats[0].shape[1]
 
@@ -144,7 +148,8 @@ class DIF_Net(nn.Module):
             f_list = []
             for proj_f in proj_feats:
                 feat = proj_f[:, i, ...]  # B, C, W, H
-                p = data["proj_points"][:, i, ...]  # B, N, 2
+
+                p = data["proj_pts"][:, i, ...]  # B, N, 2
                 p_feats = index_2d(feat, p)  # B, C, N
                 f_list.append(p_feats)
             p_feats = torch.cat(f_list, dim=1)
