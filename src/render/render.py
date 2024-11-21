@@ -59,6 +59,7 @@ def get_pts(rays, n_samples, perturb=None):
 
 def render_dif(rays, raw, n_samples):
     pts, z_vals, rays_o, rays_d = get_pts(rays, n_samples, None)
+    raw = raw.reshape(pts.shape[0], pts.shape[1], 1)
     acc, weights = raw2outputs(raw, z_vals, rays_d)  # acc 和 weights 各自的含义是？
     ret = {"acc": acc, "pts": pts, "raw": raw, "weights": weights}
     for k in ret:
