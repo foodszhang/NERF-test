@@ -57,8 +57,7 @@ def get_pts(rays, n_samples, perturb=None):
     return pts, z_vals, rays_o, rays_d
 
 
-def render_dif(data, raw, n_samples):
-    rays = data["rays"]
+def render_dif(rays, raw, n_samples):
     pts, z_vals, rays_o, rays_d = get_pts(rays, n_samples, None)
     acc, weights = raw2outputs(raw, z_vals, rays_d)  # acc 和 weights 各自的含义是？
     ret = {"acc": acc, "pts": pts, "raw": raw, "weights": weights}
