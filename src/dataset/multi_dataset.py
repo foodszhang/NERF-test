@@ -171,7 +171,7 @@ class MultiTIGREDataset(Dataset):
     """
 
     def __init__(
-        self, data_dir, n_rays=1024, n_samples=512, type="train", device="cuda"
+        self, data_dir, n_rays=1024, n_samples=32, type="train", device="cuda"
     ):
         super().__init__()
         self.data_dir = data_dir
@@ -270,7 +270,7 @@ class MultiTIGREDataset(Dataset):
                 projs = projections[proj_num, select_coords[:, 0], select_coords[:, 1]]
                 pts, _, _, _ = get_pts(
                     rays,
-                    256,
+                    self.n_samples,
                 )
                 pts = pts.reshape(-1, 3)
                 q = coord_to_dif_base(pts)
@@ -281,14 +281,6 @@ class MultiTIGREDataset(Dataset):
                         coords, dtype=torch.float32, device=self.device
                     )
                     cl.append(coords)
-                    if other_proj_num == 1 and proj_num == 1:
-                        qq = pts.reshape(128, -1, 3)
-                        q_coords = self.geo.project(qq[50], self.angles[other_proj_num])
-                        print("q_coords.shape", q_coords.shape)
-                        print("123123123", q_coords[0], q_coords[1], q_coords[2])
-                        print("ededed", select_coords[:, 0][0], select_coords[:, 1][0])
-                        print("dededed'", (q_coords[0] + 1) / 2 * 255)
-
                 coords = torch.stack(cl, dim=0)
                 #
                 image_pts = index_3d(image, pts)
