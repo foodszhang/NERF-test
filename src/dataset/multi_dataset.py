@@ -272,7 +272,7 @@ class MultiTIGREDataset(Dataset):
                     rays,
                     256,
                 )
-                print("444444pts.shape", pts.shape())
+                print("444444pts.shape", pts.shape)
                 pts = pts.reshape(-1, 3)
                 q = coord_to_dif_base(pts)
                 cl = []
@@ -291,7 +291,8 @@ class MultiTIGREDataset(Dataset):
                         qq = pts.reshape(128, -1, 3)
                         q_coords = self.geo.project(qq[0], self.angles[other_proj_num])
                         print("q_coords.shape", q_coords.shape)
-                        print("123123123", q[0], q[1])
+                        print("123123123", q[0], q[1], q[2])
+                        print("ededed", select_coords[:, 0], select_coords[:, 1])
 
                 coords = torch.stack(cl, dim=0)
                 #
