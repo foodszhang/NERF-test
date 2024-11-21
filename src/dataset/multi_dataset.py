@@ -41,6 +41,10 @@ def coord_to_dif_base(points):
     return (points + 0.1275) / (0.1275 + 0.1275)
 
 
+def coord_to_sax_base(points):
+    return points * 0.1275 - 0.1275
+
+
 # TODO: HARD CODE
 def index_3d(image, uv):
     # feat: [D, H, W]
@@ -268,6 +272,7 @@ class MultiTIGREDataset(Dataset):
                     rays,
                     256,
                 )
+                print("444444pts.shape", pts.shape())
                 pts = pts.reshape(-1, 3)
                 q = coord_to_dif_base(pts)
                 cl = []
@@ -277,9 +282,16 @@ class MultiTIGREDataset(Dataset):
                         coords, dtype=torch.float32, device=self.device
                     )
                     cl.append(coords)
-                    if other_proj_num == 1:
-                        projs_p = index_2d(projections, coords)
-                        print("4234234234", projs, projs_p)
+                    if other_proj_num == 1 and proj_num == 1:
+                        print(
+                            "qqqqq",
+                            coord_to_dif_base(-0.1275),
+                            coord_to_dif_base(0.1275),
+                        )
+                        qq = pts.reshape(128, -1, 3)
+                        q_coords = self.geo.project(qq[0], self.angles[other_proj_num])
+                        print("q_coords.shape", q_coords.shape)
+                        print("123123123", q[0], q[1])
 
                 coords = torch.stack(cl, dim=0)
                 #
