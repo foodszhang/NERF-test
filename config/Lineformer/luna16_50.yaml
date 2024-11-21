@@ -77,12 +77,12 @@ train:
   n_rays: 1024
   n_samples: 256
     #n_rays: 512
-  lrate: 0.001
+  lrate: 0.01
   lrate_gamma: 0.1
   lrate_step: 1500
   resume: False
   window_size: [8, 8]
   window_num: 16
 log:
-  i_eval: 10  # Epoch for evaluation
+  i_eval: 5  # Epoch for evaluation
   i_save: 100  # Epoch for saving
