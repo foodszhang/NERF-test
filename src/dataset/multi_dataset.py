@@ -59,6 +59,18 @@ def index_3d(image, uv):
     return samples[0, 0, :, :, 0]  # [B, C, N]
 
 
+def index_2d(feat, uv):
+    # https://zhuanlan.zhihu.com/p/137271718
+    # feat: [B, C, H, W]
+    # uv: [B, N, 2]
+    uv = uv.unsqueeze(2)  # [B, N, 1, 2]
+    feat = feat.transpose(2, 3)  # [W, H]
+    samples = torch.nn.functional.grid_sample(
+        feat, uv, align_corners=True
+    )  # [B, C, N, 1]
+    return samples[:, :, :, 0]  # [B, C, N]
+
+
 # 这里的各项参数代表的物理含义可以在哪查到呢？
 class ConeGeometry(object):
     """
@@ -265,6 +277,10 @@ class MultiTIGREDataset(Dataset):
                         coords, dtype=torch.float32, device=self.device
                     )
                     cl.append(coords)
+                    if other_proj_num == 1:
+                        projs_p = index_2d(projections, coords)
+                        print("4234234234", projs, projs_p)
+
                 coords = torch.stack(cl, dim=0)
                 #
                 image_pts = index_3d(image, pts)
