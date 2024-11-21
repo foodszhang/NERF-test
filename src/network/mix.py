@@ -103,7 +103,7 @@ class DIF_Net(nn.Module):
         )
         print(f"DIF_Net, mid_ch: {mid_ch}, combine: {self.combine}")
 
-    def forward(self, data, eval_npoint=100000):
+    def forward(self, data, eval_npoint=10240):
         # projection encoding
         projs = data["projections"]  # B, M, C, W, H
         b, m, w, h = projs.shape
@@ -115,11 +115,7 @@ class DIF_Net(nn.Module):
             proj_feats[i] = proj_feats[i].reshape(b, m, c_, w_, h_)  # B, M, C, W, H
 
         # point-wise forward
-        total_npoint = (
-            data["proj_pts"].shape[1]
-            * data["proj_pts"].shape[2]
-            * data["proj_pts"].shape[3]
-        )
+        total_npoint = data["proj_pts"].shape[2] * data["proj_pts"].shape[3]
         n_batch = int(np.ceil(total_npoint / eval_npoint))
 
         pred_list = []

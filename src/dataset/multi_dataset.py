@@ -281,6 +281,7 @@ class MultiTIGREDataset(Dataset):
             coords = torch.stack(coords_list, dim=0)
             coords = coords.permute(1, 0, 2, 3)
             coords = coords.reshape(self.n_views, -1, 2)
+            print("333333", coords.shape)
 
             return {
                 "projs": projs,
@@ -319,18 +320,35 @@ class MultiTIGREDataset(Dataset):
                     rays,
                     self.n_samples,
                 )
+                pts, _, _, _ = get_pts(
+                    rays,
+                    10,
+                )
                 pts = pts.reshape(-1, 3)
+                q = coord_to_dif_base(pts)
+                cl = []
+                for other_proj_num in range(self.n_views):
+                    coords = self.geo.project(q, self.angles[other_proj_num])
+                    coords = torch.tensor(
+                        coords, dtype=torch.float32, device=self.device
+                    )
+                    cl.append(coords)
+                coords = torch.stack(cl, dim=0)
+                #
                 image_pts = index_3d(image, pts)
                 projs_list.append(projs)
                 rays_list.append(rays)
                 pts_list.append(pts)
                 image_pts_list.append(image_pts)
-                coords_list.append(select_coords)
+                coords_list.append(coords)
             image_pts = torch.stack(image_pts_list, dim=0)
             pts = torch.stack(pts_list, dim=0)
             rays = torch.stack(rays_list, dim=0)
             projs = torch.stack(projs_list, dim=0)
             coords = torch.stack(coords_list, dim=0)
+            coords = coords.permute(1, 0, 2, 3)
+            coords = coords.reshape(self.n_views, -1, 2)
+            print("333333", coords.shape)
             return {
                 "projs": projs,
                 "rays": rays,
