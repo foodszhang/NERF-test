@@ -63,7 +63,7 @@ class BasicTrainer(Trainer):
         image = image.reshape(-1)
         image_pred = image_pred.reshape(-1)
         calc_mse_loss(loss, image, image_pred)
-        # image_pred = image_pred.reshape(10, -1)
+        image_pred = image_pred.reshape(10, -1)
         # TODO: HARD CODE  仅限batch size=1
         for i in range(data["rays"].shape[1]):
             rays = data["rays"][0][i].reshape(-1, 8)
@@ -92,6 +92,7 @@ class BasicTrainer(Trainer):
             image = data["image"]
             image = image.reshape(256, 256, 256)
             image_pred = image_pred.reshape(256, 256, 256)
+            image_pred = image_pred.transpose(2, 1, 0)
             # stx()
             loss["ssim_3d"] += get_ssim_3d(image_pred, image)
 

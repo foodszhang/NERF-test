@@ -100,7 +100,7 @@ class DIF_Net(nn.Module):
         )
         print(f"DIF_Net, mid_ch: {mid_ch}, combine: {self.combine}")
 
-    def forward(self, data, eval_npoint=10240):
+    def forward(self, data, eval_npoint=102400):
         # projection encoding
         projs = data["projections"]  # B, M, C, W, H
         b, m, w, h = projs.shape

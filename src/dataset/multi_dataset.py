@@ -277,6 +277,7 @@ class MultiTIGREDataset(Dataset):
                 cl = []
                 for other_proj_num in range(self.n_views):
                     coords = self.geo.project(q, self.angles[other_proj_num])
+                    # coords -> (-1, 1)
                     coords = torch.tensor(
                         coords, dtype=torch.float32, device=self.device
                     )
@@ -299,8 +300,8 @@ class MultiTIGREDataset(Dataset):
             coords = coords.reshape(self.n_views, -1, 2)
 
             return {
-                # "projs": projs,
-                # "rays": rays,
+                "projs": projs,
+                "rays": rays,
                 "pts:": pts,
                 "image": image_pts,
                 "projections": projections,
