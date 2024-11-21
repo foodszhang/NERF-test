@@ -365,7 +365,7 @@ class MultiTIGREDataset(Dataset):
             indexing="ij",
         )
         # voxel 就是一个 numpy.ndarray, 形状为 (256, 256, 178, 3)
-        voxel = np.asarray(xyz).transpose([1, 2, 3, 0])
+        voxel = np.asarray(xyz).transpose([3, 2, 1, 0])
         # stx()
         return voxel
 
