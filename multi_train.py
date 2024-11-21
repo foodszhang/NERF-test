@@ -101,12 +101,12 @@ class BasicTrainer(Trainer):
             show_density = torch.concat(show, dim=1)
 
             # cast_to_image -> 转成 numpy并多加一个维度
-            self.writer.add_image(
-                "eval/density (row1: gt, row2: pred)",
-                cast_to_image(show_density),
-                global_step,
-                dataformats="HWC",
-            )
+            # self.writer.add_image(
+            #    "eval/density (row1: gt, row2: pred)",
+            #    cast_to_image(show_density),
+            #    global_step,
+            #    dataformats="HWC",
+            # )
 
             proj_pred_origin_dir = osp.join(self.expdir, f"{index}_proj_pred_origin")
             proj_gt_origin_dir = osp.join(self.expdir, f"{index}_proj_gt_origin")
@@ -118,52 +118,52 @@ class BasicTrainer(Trainer):
             os.makedirs(proj_pred_dir, exist_ok=True)
             os.makedirs(proj_gt_dir, exist_ok=True)
 
-            for i in tqdm(range(N)):
-                """
-                cast_to_image 自带了归一化, 1 - 放在外边
-                """
-                iio.imwrite(
-                    osp.join(proj_pred_origin_dir, f"proj_pred_{str(i)}.png"),
-                    (cast_to_image(projs_pred[i]) * 255).astype(np.uint8),
-                )
-                iio.imwrite(
-                    osp.join(proj_gt_origin_dir, f"proj_gt_{str(i)}.png"),
-                    (cast_to_image(projs[i]) * 255).astype(np.uint8),
-                )
-                iio.imwrite(
-                    osp.join(proj_pred_dir, f"proj_pred_{str(i)}.png"),
-                    ((1 - cast_to_image(projs_pred[i])) * 255).astype(np.uint8),
-                )
-                iio.imwrite(
-                    osp.join(proj_gt_dir, f"proj_gt_{str(i)}.png"),
-                    ((1 - cast_to_image(1 - projs[i])) * 255).astype(np.uint8),
-                )
+            # for i in tqdm(range(N)):
+            #    """
+            #    cast_to_image 自带了归一化, 1 - 放在外边
+            #    """
+            #    iio.imwrite(
+            #        osp.join(proj_pred_origin_dir, f"proj_pred_{str(i)}.png"),
+            #        (cast_to_image(projs_pred[i]) * 255).astype(np.uint8),
+            #    )
+            #    iio.imwrite(
+            #        osp.join(proj_gt_origin_dir, f"proj_gt_{str(i)}.png"),
+            #        (cast_to_image(projs[i]) * 255).astype(np.uint8),
+            #    )
+            #    iio.imwrite(
+            #        osp.join(proj_pred_dir, f"proj_pred_{str(i)}.png"),
+            #        ((1 - cast_to_image(projs_pred[i])) * 255).astype(np.uint8),
+            #    )
+            #    iio.imwrite(
+            #        osp.join(proj_gt_dir, f"proj_gt_{str(i)}.png"),
+            #        ((1 - cast_to_image(1 - projs[i])) * 255).astype(np.uint8),
+            #    )
 
-            # stx()
-            for ls in loss.keys():
-                self.writer.add_scalar(f"eval/{ls}", loss[ls], global_step)
+            ## stx()
+            # for ls in loss.keys():
+            #    self.writer.add_scalar(f"eval/{ls}", loss[ls], global_step)
 
             # Save
             # 保存各种视图
             eval_save_dir = osp.join(self.evaldir, f"epoch_{idx_epoch:05d}")
             os.makedirs(eval_save_dir, exist_ok=True)
             np.save(
-                osp.join(eval_save_dir, f"{i}image_pred.npy"),
+                osp.join(eval_save_dir, f"{index}image_pred.npy"),
                 image_pred.cpu().detach().numpy(),
             )
             np.save(
-                osp.join(eval_save_dir, f"{i}image_gt.npy"),
+                osp.join(eval_save_dir, f"{index}image_gt.npy"),
                 image.cpu().detach().numpy(),
             )
             iio.imwrite(
-                osp.join(eval_save_dir, f"{i}slice_show_row1_gt_row2_pred.png"),
+                osp.join(eval_save_dir, f"{index}slice_show_row1_gt_row2_pred.png"),
                 (cast_to_image(show_density) * 255).astype(np.uint8),
             )
             with open(osp.join(eval_save_dir, "stats.txt"), "w") as f:
                 for key, value in loss.items():
-                    f.write("%s: %f\n" % (key, value.item()))
+                    f.write("%s: %f\n" % (key, value))
 
-        loss["ssim_3d_avg"] /= len(self.eval_dset)
+        loss["ssim_3d_avg"] = loss["ssim_3d"] / len(self.eval_dset)
         if loss["ssim_3d"] > self.best_ssim_3d:
             torch.save(
                 {
