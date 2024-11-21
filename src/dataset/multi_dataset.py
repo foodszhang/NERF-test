@@ -287,13 +287,7 @@ class MultiTIGREDataset(Dataset):
                         print("q_coords.shape", q_coords.shape)
                         print("123123123", q_coords[0], q_coords[1], q_coords[2])
                         print("ededed", select_coords[:, 0][0], select_coords[:, 1][0])
-                        print("dededed'", q_coords[0] * 255)
-                        test_q = np.asarray([[0.5, 0.5, 0.5]])
-                        test_q = torch.tensor(
-                            test_q, dtype=torch.float32, device=self.device
-                        )
-                        c = self.geo.project(test_q, self.angles[other_proj_num])
-                        print("234234234", c)
+                        print("dededed'", (q_coords[0] + 1) / 2 * 255)
 
                 coords = torch.stack(cl, dim=0)
                 #
