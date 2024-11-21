@@ -74,7 +74,7 @@ render:
 train:
   epoch: 200
   n_batch: 1
-  n_rays: 1024
+  n_rays: 512
   n_samples: 256
     #n_rays: 512
   lrate: 0.01
@@ -84,5 +84,5 @@ train:
   window_size: [8, 8]
   window_num: 16
 log:
-  i_eval: 5  # Epoch for evaluation
+  i_eval: 50  # Epoch for evaluation
   i_save: 100  # Epoch for saving
