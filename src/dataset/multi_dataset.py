@@ -301,7 +301,7 @@ class MultiTIGREDataset(Dataset):
             projections = torch.tensor(
                 projections, dtype=torch.float32, device=self.device
             )
-            projections = projections * 10
+            projections = projections * 32
             projs_list = []
             rays_list = []
             pts_list = []
