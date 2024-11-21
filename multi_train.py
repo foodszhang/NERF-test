@@ -73,44 +73,19 @@ class BasicTrainer(Trainer):
         """
         # Evaluate projection    渲染投射的 RGB 图
         loss = {
-            #"proj_psnr": 0.0,
+            # "proj_psnr": 0.0,
             # "proj_ssim": get_ssim(projs_pred, projs),
             "psnr_3d": 0.0,
-             "ssim_3d": get_ssim_3d(image_pred, image),
+            "ssim_3d": 0.0,
         }
-        for index, d in enumerate(self.):
-            # TODO: assume batch size is 1
-            image = d["image"][0]
-            projs = d["projs"][0]  # [256, 256] -> [50, 256, 256]
-            rays = d["rays"][0].reshape(-1, 8)  # [65536,8]  -> [3276800, 8]
+        for index, data in enumerate(self.eval_dset):
             # stx()
-            N, H, W = projs.shape
-            projs_pred = []
-            for i in tqdm(
-                range(0, rays.shape[0], self.n_rays)
-            ):  # 每一簇射线是 n_rays ，每隔这么多射线渲染一次
-                projs_pred.append(
-                    render(
-                        rays[i : i + self.n_rays],
-                        self.net,
-                        self.net_fine,
-                        **self.conf["render"],
-                    )["acc"]
-                )
-
-            projs_pred = torch.cat(projs_pred, 0).reshape(N, H, W)
-
-            # Evaluate density      渲染3D图像
-            image_pred = run_network(
-                self.eval_dset.voxels,
-                self.net_fine if self.net_fine is not None else self.net,
-                self.netchunk,
-            )
+            image_pred = self.net(data)
+            image = data["image"]
+            image = image.reshape(-1)
+            image_pred = image_pred.reshape(-1)
             # stx()
-            image_pred = image_pred.squeeze()
-            # stx()
-            loss["proj_psnr"] += get_psnr(projs_pred, projs)
-            loss["psnr_3d"] += get_psnr_3d(image_pred, image)
+            loss["ssim_3d"] += get_ssim_3d(image_pred, image)
 
             show_slice = 5
             show_step = image.shape[-1] // show_slice
@@ -188,6 +163,7 @@ class BasicTrainer(Trainer):
                 for key, value in loss.items():
                     f.write("%s: %f\n" % (key, value.item()))
 
+        loss["ssim_3d_avg"] /= len(self.eval_dset)
         if loss["ssim_3d"] > self.best_ssim_3d:
             torch.save(
                 {

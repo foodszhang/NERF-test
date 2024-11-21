@@ -2,15 +2,15 @@ import os
 import json
 import numpy as np
 
-# data_path = "/autodl-fs/subset0/"
-data_path = "./data"
+data_path = "/autodl-fs/subset0/"
+# data_path = "./data"
 files = []
 for file in os.listdir(data_path):
     if file.endswith("mhd"):
         files.append(file)
 data = {"train": [], "eval": [], "test": []}
-data["train"] = files[:-5]
-data["eval"] = files[-4:-1]
+data["train"] = files[:10]
+data["eval"] = files[-2:-1]
 data["test"] = [files[-1]]
 data["n_views"] = 10
 data["config.yaml"] = "./data/luna16/config.yml"
