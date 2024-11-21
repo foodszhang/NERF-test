@@ -62,16 +62,16 @@ class BasicTrainer(Trainer):
         image = data["image"]
         image = image.reshape(-1)
         image_pred = image_pred.reshape(-1)
-        loss = {"loss": 0.0}
         calc_mse_loss(loss, image, image_pred)
-        image_pred = image_pred.reshape(10, -1)
+        # image_pred = image_pred.reshape(10, -1)
         ###TODO: HARD CODE  仅限batch size=1
-        for i in range(data["rays"].shape[1]):
-            rays = data["rays"][0][i].reshape(-1, 8)
-            ret = render_dif(rays, image_pred[i], 64)
-            projs_pred = ret["acc"]
-            projs = data["projs"][i]
-            calc_mse_loss(loss, projs, projs_pred)
+        # for i in range(data["rays"].shape[1]):
+        #    rays = data["rays"][0][i].reshape(-1, 8)
+        #    ret = render_dif(rays, image_pred[i], 64)
+        #    projs_pred = ret["acc"]
+
+        #    projs = data["projs"][0][i]
+        #    calc_mse_loss(loss, projs, projs_pred)
 
         return loss["loss"]
 
