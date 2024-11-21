@@ -82,8 +82,8 @@ class BasicTrainer(Trainer):
             # stx()
             image_pred = self.net(data)
             image = data["image"]
-            image = image.reshape(-1)
-            image_pred = image_pred.reshape(-1)
+            image = image.reshape(256, 256, 256)
+            image_pred = image_pred.reshape(256, 256, 256)
             # stx()
             loss["ssim_3d"] += get_ssim_3d(image_pred, image)
 
