@@ -65,7 +65,7 @@ class BasicTrainer(Trainer):
         loss = {"loss": 0.0}
         calc_mse_loss(loss, image, image_pred)
         image_pred = image_pred.reshape(10, -1)
-        for i in range(len(data["rays"].shape[0])):
+        for i in range(data["rays"].shape[0]):
             rays = data["rays"][i].reshape(-1, 8)
             ret = render_dif(rays, image_pred[i], self.conf["render"]["n_samples"])
             projs_pred = ret["acc"]
