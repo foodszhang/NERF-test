@@ -6,15 +6,15 @@ numVal: 10
 
 # System configuration
 DSD: 1500.0  # Distance Source Detector      (mm)
-DSO: 1000.0  # Distance Source Origin        (mm)
+DSO: 1200.0  # Distance Source Origin        (mm)
 
 # Detector parameters
 nDetector: # Number of pixels              (px)
 - 256 
 - 256 
 dDetector: # Size of each pixel            (mm)
-- 1.0
-- 1.0
+- 1.5
+- 1.5
 
 # Image parameters
 nVoxel: # Number of voxels              (vx)

@@ -282,17 +282,16 @@ class MultiTIGREDataset(Dataset):
                     )
                     cl.append(coords)
                     if other_proj_num == 1 and proj_num == 1:
-                        print(
-                            "qqqqq",
-                            coord_to_dif_base(-0.1275),
-                            coord_to_dif_base(0.1275),
-                        )
                         qq = pts.reshape(128, -1, 3)
-                        q_coords = self.geo.project(qq[0], self.angles[other_proj_num])
+                        q_coords = self.geo.project(qq[50], self.angles[other_proj_num])
                         print("q_coords.shape", q_coords.shape)
                         print("123123123", q_coords[0], q_coords[1], q_coords[2])
                         print("ededed", select_coords[:, 0][0], select_coords[:, 1][0])
-                        print("dededed'", q_coords * 255)
+                        print("dededed'", q_coords[0] * 255)
+                        c = self.geo.project(
+                            np.asarray([[0.5, 0.5, 0.5]]), self.angles[other_proj_num]
+                        )
+                        print("234234234", c)
 
                 coords = torch.stack(cl, dim=0)
                 #
