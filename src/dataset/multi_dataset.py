@@ -254,7 +254,7 @@ class MultiTIGREDataset(Dataset):
                 projs = projections[proj_num, select_coords[:, 0], select_coords[:, 1]]
                 pts, _, _, _ = get_pts(
                     rays,
-                    64,
+                    256,
                 )
                 pts = pts.reshape(-1, 3)
                 q = coord_to_dif_base(pts)
@@ -283,8 +283,8 @@ class MultiTIGREDataset(Dataset):
             coords = coords.reshape(self.n_views, -1, 2)
 
             return {
-                "projs": projs,
-                "rays": rays,
+                # "projs": projs,
+                # "rays": rays,
                 "pts:": pts,
                 "image": image_pts,
                 "projections": projections,
