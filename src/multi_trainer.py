@@ -88,9 +88,10 @@ class Trainer:
             optimizer 更新权重 weights, 用的是 optimizer.step()
             scheduler 更新学习率 lr, 用的是 scheduler.step()
         """
-        self.optimizer = torch.optim.Adam(
-            params=grad_vars, lr=cfg["train"]["lrate"], betas=(0.9, 0.999)
-        )
+        # self.optimizer = torch.optim.Adam(
+        #    params=grad_vars, lr=cfg["train"]["lrate"], betas=(0.9, 0.999)
+        # )
+        self.optimizer = torch.optim.AdamW(grad_vars, lr=cfg["train"]["lrate"])
         # self.lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
         #     optimizer=self.optimizer, gamma=cfg["train"]["lrate_gamma"])
         self.lr_scheduler = torch.optim.lr_scheduler.StepLR(
