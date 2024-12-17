@@ -185,15 +185,18 @@ def generator(name, data_dir, configPath, result_dir, show=False):
         matPath,
         data["nVoxel"],
     )
-    window = (-800, 2000)
+    window = (-800, 1000)
     img = convert_to_attenuation(img, data["rescale_slope"], data["rescale_intercept"])
     window = (
-        convert_to_attenuation(-800, data["rescale_slope"], data["rescale_intercept"]),
-        convert_to_attenuation(2000, data["rescale_slope"], data["rescale_intercept"]),
+        convert_to_attenuation(
+            window[0], data["rescale_slope"], data["rescale_intercept"]
+        ),
+        convert_to_attenuation(
+            window[1], data["rescale_slope"], data["rescale_intercept"]
+        ),
     )
     img = np.clip(img, window[0], window[1])
     img = (img - window[0]) / (window[1] - window[0])
-    print("2233333", img.max(), img.min())
     image_result_dir = osp.join(data_dir, result_dir, "image")
     projection_result_dir = osp.join(data_dir, result_dir, "projection")
     os.makedirs(image_result_dir, exist_ok=True)
@@ -210,7 +213,6 @@ def generator(name, data_dir, configPath, result_dir, show=False):
     ]
     with open(osp.join(projection_result_dir, f"{name}.pickle"), "wb") as handle:
         pickle.dump(projections, handle, pickle.HIGHEST_PROTOCOL)
-    print("4444444", projections.max(), projections.min())
     if show or True:
         save_dir_train_ct = osp.join("dataGenerator/", result_dir, "show_vis_train_ct/")
         save_dir_train_proj = osp.join(

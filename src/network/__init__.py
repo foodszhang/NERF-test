@@ -10,7 +10,7 @@ def get_network(type):
         return Lineformer
     elif type == "dif":
         return DIF_Net
-    elif type == "dif":
+    elif type == "mix":
         return MixNet
     else:
         raise NotImplementedError("Unknown network type!")

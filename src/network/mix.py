@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 
 from .unet import UNet
+from .unet3 import UNet3Plus
 from .point_classifier import SurfaceClassifier
 from .network import DensityNetwork
 
@@ -86,11 +87,15 @@ class MixNet(nn.Module):
 
 
 class DIF_Net(nn.Module):
-    def __init__(self, num_views, combine, mid_ch=128):
+    def __init__(self, num_views, combine, mid_ch=128, encoder='unet'):
         super().__init__()
         self.combine = combine
-
-        self.image_encoder = UNet(1, mid_ch)
+        if encoder == 'unet':
+            self.encoder = 'unet'
+            self.image_encoder = UNet(1, mid_ch)
+        else:
+            self.encoder = 'unet3'
+            self.image_encoder = UNet3Plus(mid_ch, fastup=False, use_cgm=False)
 
         if self.combine == "mlp":
             self.view_mixer = MLP([num_views, num_views // 2, 1])
@@ -105,7 +110,9 @@ class DIF_Net(nn.Module):
         projs = data["projections"]  # B, M, C, W, H
         b, m, w, h = projs.shape
         projs = projs.reshape(b * m, 1, w, h)  # B', C, W, H
-        proj_feats = self.image_encoder(projs)
+        if self.training:
+            if self.encoder = 'unet3':
+                proj_feats = self.image_encoder(projs)['final_pred']
         proj_feats = list(proj_feats) if type(proj_feats) is tuple else [proj_feats]
         for i in range(len(proj_feats)):
             _, c_, w_, h_ = proj_feats[i].shape
