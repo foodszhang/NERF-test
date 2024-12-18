@@ -197,6 +197,7 @@ class MultiTIGREDataset(Dataset):
         points = points.astype(float) / (256 - 1)
         points = points.reshape(3, -1)
         self.points = points.transpose(1, 0)  # N, 3
+        self.points = torch.tensor(self.points, dtype=torch.float32, device=device)
         self.npoint = 300000
         self.angles = np.linspace(0, 180 / 180 * np.pi, self.n_views + 1)[:-1]
         rays = self.get_rays(
