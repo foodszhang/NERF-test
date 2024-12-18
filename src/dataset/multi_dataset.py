@@ -394,6 +394,7 @@ class MultiTIGREDataset(Dataset):
             projections = projections
             pts = self.voxels.reshape(-1, 3)
             q = coord_to_dif_base(pts)
+            values = index_3d(image, pts)
             cl = []
             for other_proj_num in range(self.n_views):
                 coords = self.geo.project(q, self.angles[other_proj_num])
@@ -403,7 +404,7 @@ class MultiTIGREDataset(Dataset):
             return {
                 "projs": projections,
                 "pts:": pts,
-                "image": image,
+                "image": values,
                 "projections": projections,
                 "proj_pts": coords,
             }
