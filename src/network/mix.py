@@ -87,7 +87,7 @@ class MixNet(nn.Module):
 
 
 class DIF_Net(nn.Module):
-    def __init__(self, num_views, combine, mid_ch=128, encoder="unet"):
+    def __init__(self, num_views, combine, mid_ch=128, encoder="unet3"):
         super().__init__()
         self.combine = combine
         if encoder == "unet":
@@ -95,7 +95,7 @@ class DIF_Net(nn.Module):
             self.image_encoder = UNet(1, mid_ch)
         else:
             self.encoder = "unet3"
-            self.image_encoder = UNet3Plus(mid_ch, fastup=False, use_cgm=False)
+            self.image_encoder = UNet3Plus(mid_ch, fast_up=False, use_cgm=False)
 
         if self.combine == "mlp":
             self.view_mixer = MLP([num_views, num_views // 2, 1])
