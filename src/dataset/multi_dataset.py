@@ -33,7 +33,7 @@ def load_names():
         return names
 
 
-def coord_to_dif(points, max_val=0.1275, min_val=0.1275):
+def coord_to_dif(points, max_val=0.1275, min_val=-0.1275):
     return ((points - min_val) / (max_val - min_val) * 2) - 1
 
 
@@ -46,7 +46,7 @@ def coord_to_sax_base(points):
 
 
 # TODO: HARD CODE
-def index_3d(image, uv, max_val=0.1275, min_val=0.1275):
+def index_3d(image, uv, max_val=0.1275, min_val=-0.1275):
     # feat: [D, H, W]
     # uv: [N, 3]
     # uv = uv.reshape(1, *uv.shape) # [1, B, N, 3]
