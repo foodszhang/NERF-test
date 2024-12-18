@@ -20,10 +20,10 @@ get_mse = lambda x, y: torch.mean((x - y) ** 2)
 # SSIM
 # --------------------------------------------
 def get_ssim(img1, img2, border=0):
-    '''calculate SSIM
+    """calculate SSIM
     the same outputs as MATLAB's
     img1, img2: [b, h, w]
-    '''
+    """
     if torch.is_tensor(img1):
         img1 = img1.cpu().detach().numpy()
     if torch.is_tensor(img2):
@@ -33,12 +33,12 @@ def get_ssim(img1, img2, border=0):
     img2 = img_as_ubyte(img2)
 
     if not img1.shape == img2.shape:
-        raise ValueError('Input images must have the same dimensions.')
-    
+        raise ValueError("Input images must have the same dimensions.")
+
     b, h, w = img1.shape
 
-    img1 = img1[:, border:h - border, border:w - border]
-    img2 = img2[:, border:h - border, border:w - border]
+    img1 = img1[:, border : h - border, border : w - border]
+    img2 = img2[:, border : h - border, border : w - border]
 
     if img1.ndim == 2:
         return ssim(img1, img2)
@@ -51,13 +51,12 @@ def get_ssim(img1, img2, border=0):
         elif b == 1:
             return ssim(np.squeeze(img1), np.squeeze(img2))
     else:
-        raise ValueError('Wrong input image dimensions.')
-
+        raise ValueError("Wrong input image dimensions.")
 
 
 def ssim(img1, img2):
-    C1 = (0.01 * 255)**2
-    C2 = (0.03 * 255)**2
+    C1 = (0.01 * 255) ** 2
+    C2 = (0.03 * 255) ** 2
 
     img1 = img1.astype(np.float64)
     img2 = img2.astype(np.float64)
@@ -73,10 +72,10 @@ def ssim(img1, img2):
     sigma2_sq = cv2.filter2D(img2**2, -1, window)[5:-5, 5:-5] - mu2_sq
     sigma12 = cv2.filter2D(img1 * img2, -1, window)[5:-5, 5:-5] - mu1_mu2
 
-    ssim_map = ((2 * mu1_mu2 + C1) * (2 * sigma12 + C2)) / ((mu1_sq + mu2_sq + C1) *
-                                                            (sigma1_sq + sigma2_sq + C2))
+    ssim_map = ((2 * mu1_mu2 + C1) * (2 * sigma12 + C2)) / (
+        (mu1_sq + mu2_sq + C1) * (sigma1_sq + sigma2_sq + C2)
+    )
     return ssim_map.mean()
-
 
 
 def get_psnr(x, y):
@@ -86,7 +85,7 @@ def get_psnr(x, y):
         x_norm = (x - torch.min(x)) / (torch.max(x) - torch.min(x))
         y_norm = (y - torch.min(y)) / (torch.max(y) - torch.min(y))
         mse = get_mse(x_norm, y_norm)
-        psnr = -10. * torch.log(mse) / torch.log(torch.Tensor([10.]).to(x.device))
+        psnr = -10.0 * torch.log(mse) / torch.log(torch.Tensor([10.0]).to(x.device))
     return psnr
 
 
@@ -188,13 +187,14 @@ def cast_to_image(tensor, normalize=True):
         img = cv2.normalize(img, None, 0, 1, cv2.NORM_MINMAX)
     return img
 
+
 def gen_log(model_path):
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     formatter = logging.Formatter("%(asctime)s - %(levelname)s: %(message)s")
 
-    log_file = model_path + '/log.txt'
-    fh = logging.FileHandler(log_file, mode='a')
+    log_file = model_path + "/log.txt"
+    fh = logging.FileHandler(log_file, mode="a")
     fh.setLevel(logging.INFO)
     fh.setFormatter(formatter)
 
@@ -206,6 +206,7 @@ def gen_log(model_path):
     logger.addHandler(ch)
     return logger
 
+
 def time2file_name(time):
     year = time[0:4]
     month = time[5:7]
@@ -213,10 +214,10 @@ def time2file_name(time):
     hour = time[11:13]
     minute = time[14:16]
     second = time[17:19]
-    time_filename = year + '_' + month + '_' + day + '_' + hour + '_' + minute + '_' + second
+    time_filename = (
+        year + "_" + month + "_" + day + "_" + hour + "_" + minute + "_" + second
+    )
     return time_filename
-
-
 
 
 import torch
@@ -227,8 +228,13 @@ import numpy as np
 
 # 计算一维的高斯分布向量
 def gaussian(window_size, sigma):
-    gauss = torch.Tensor([exp(-(x - window_size//2)**2/float(2*sigma**2)) for x in range(window_size)])
-    return gauss/gauss.sum()
+    gauss = torch.Tensor(
+        [
+            exp(-((x - window_size // 2) ** 2) / float(2 * sigma**2))
+            for x in range(window_size)
+        ]
+    )
+    return gauss / gauss.sum()
 
 
 # 创建高斯核，通过两个一维高斯分布向量进行矩阵乘法得到
@@ -244,7 +250,15 @@ def create_window(window_size, channel=1):
 # 直接使用SSIM的公式，但是在计算均值时，不是直接求像素平均值，而是采用归一化的高斯核卷积来代替。
 # 在计算方差和协方差时用到了公式Var(X)=E[X^2]-E[X]^2, cov(X,Y)=E[XY]-E[X]E[Y].
 # 正如前面提到的，上面求期望的操作采用高斯核卷积代替。
-def c_ssim(img1, img2, window_size=11, window=None, size_average=True, full=False, val_range=None):
+def c_ssim(
+    img1,
+    img2,
+    window_size=11,
+    window=None,
+    size_average=True,
+    full=False,
+    val_range=None,
+):
     # Value range can be different from 255. Other common ranges are 1 (sigmoid) and 2 (tanh).
     if val_range is None:
         if torch.max(img1) > 128:
@@ -296,7 +310,6 @@ def c_ssim(img1, img2, window_size=11, window=None, size_average=True, full=Fals
     return ret
 
 
-
 # Classes to re-use window
 class SSIM(torch.nn.Module):
     def __init__(self, window_size=11, size_average=True, val_range=None):
@@ -315,8 +328,18 @@ class SSIM(torch.nn.Module):
         if channel == self.channel and self.window.dtype == img1.dtype:
             window = self.window
         else:
-            window = create_window(self.window_size, channel).to(img1.device).type(img1.dtype)
+            window = (
+                create_window(self.window_size, channel)
+                .to(img1.device)
+                .type(img1.dtype)
+            )
             self.window = window
             self.channel = channel
 
-        return c_ssim(img1, img2, window=window, window_size=self.window_size, size_average=self.size_average)
+        return c_ssim(
+            img1,
+            img2,
+            window=window,
+            window_size=self.window_size,
+            size_average=self.size_average,
+        )

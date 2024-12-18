@@ -5,6 +5,7 @@ import imageio.v2 as iio
 import numpy as np
 from tqdm import tqdm
 import argparse
+import SimpleITK as sitk
 
 
 def config_parser():
@@ -43,6 +44,11 @@ cfg = load_config(args.config)
 # stx()
 device = torch.device("cuda")
 # stx()
+
+
+def save_nifti(image, path):
+    out = sitk.GetImageFromArray(image)
+    sitk.WriteImage(out, path)
 
 
 # 从Trainer继承
@@ -155,14 +161,25 @@ class BasicTrainer(Trainer):
             # 保存各种视图
             eval_save_dir = osp.join(self.evaldir, f"epoch_{idx_epoch:05d}")
             os.makedirs(eval_save_dir, exist_ok=True)
-            np.save(
-                osp.join(eval_save_dir, f"{index}image_pred.npy"),
-                image_pred.cpu().detach().numpy(),
-            )
-            np.save(
-                osp.join(eval_save_dir, f"{index}image_gt.npy"),
-                image.cpu().detach().numpy(),
-            )
+            # np.save(
+            #    osp.join(eval_save_dir, f"{index}image_pred.npy"),
+            #    image_pred.cpu().detach().numpy(),
+            # )
+            # np.save(
+            #    osp.join(eval_save_dir, f"{index}image_gt.npy"),
+            #    image.cpu().detach().numpy(),
+            # )
+            output = np.clip(image_pred.cpu().detach().numpy(), 0, 1)
+            gt = np.clip(image.cpu().detach().numpy(), 0, 1)
+            output *= 255.0
+            gt *= 255.0
+            output = output.astype(np.uint8)
+            gt = gt.astype(np.uint8)
+            save_path = os.path.join(eval_save_dir, f"{index}.nii.gz")
+            gt_save_path = os.path.join(eval_save_dir, f"{index}_gt.nii.gz")
+            save_nifti(output, save_path)
+            save_nifti(gt, gt_save_path)
+
             iio.imwrite(
                 osp.join(eval_save_dir, f"{index}slice_show_row1_gt_row2_pred.png"),
                 (cast_to_image(show_density) * 255).astype(np.uint8),
