@@ -33,8 +33,8 @@ def load_names():
         return names
 
 
-def coord_to_dif(points):
-    return ((points + 0.1275) / (0.1275 + 0.1275) * 2) - 1
+def coord_to_dif(points, max_val=0.1275, min_val=0.1275):
+    return ((points - min_val) / (max_val - min_val) * 2) - 1
 
 
 def coord_to_dif_base(points):
@@ -46,7 +46,7 @@ def coord_to_sax_base(points):
 
 
 # TODO: HARD CODE
-def index_3d(image, uv):
+def index_3d(image, uv, max_val=0.1275, min_val=0.1275):
     # feat: [D, H, W]
     # uv: [N, 3]
     # uv = uv.reshape(1, *uv.shape) # [1, B, N, 3]
@@ -55,7 +55,7 @@ def index_3d(image, uv):
     uv = uv.unsqueeze(0)  # [B, N, 1, 3]
     uv = uv.unsqueeze(2)  # [B, N, 1, 3]
     uv = uv.unsqueeze(2)  # [B, N, 1, 3]
-    uv = coord_to_dif(uv)  # [B, N, 1, 3]
+    uv = coord_to_dif(uv, max_val, min_val)  # [B, N, 1, 3]
     # image = image.transpose(2, 3) # [W, H]
     samples = torch.nn.functional.grid_sample(
         image, uv, align_corners=True
@@ -193,6 +193,11 @@ class MultiTIGREDataset(Dataset):
         self.voxels = torch.tensor(
             self.get_voxels(self.geo), dtype=torch.float32, device=device
         )
+        points = np.mgrid[:256, :256, :256]
+        points = points.astype(float) / (256 - 1)
+        points = points.reshape(3, -1)
+        self.points = points.transpose(1, 0)  # N, 3
+        self.npoint = 300000
         self.angles = np.linspace(0, 180 / 180 * np.pi, self.n_views + 1)[:-1]
         rays = self.get_rays(
             self.angles, self.geo, device
@@ -233,6 +238,114 @@ class MultiTIGREDataset(Dataset):
             return len(self.cfg["eval"])
 
     def __getitem__(self, index):
+        # if self.type == "train":
+        #    # stx()
+        #    """
+        #    d['projs'] - [10, 256, 256]
+        #    """
+        #    name = self.cfg["train"][index]
+        #    image_path = self.cfg["image"].format(name)
+        #    image = read_nifti(image_path)
+        #    image = torch.tensor(image, dtype=torch.float32, device=self.device)
+        #    projection_path = self.cfg["projections"].format(name)
+        #    projections = pickle.load(open(projection_path, "rb"))
+        #    projections = torch.tensor(
+        #        projections, dtype=torch.float32, device=self.device
+        #    )
+        #    projections = projections
+        #    projs_list = []
+        #    rays_list = []
+        #    pts_list = []
+        #    image_pts_list = []
+        #    coords_list = []
+        #    for proj_num in range(self.n_views):
+        #        projs_valid = (projections[proj_num] > 0).flatten()
+        #        coords_valid = self.coords[
+        #            projs_valid
+        #        ]  # [65536, 2] -> [40653, 2], 将布尔值矩阵当做索引，可能是因为并不是所有的
+        #        select_inds = np.random.choice(
+        #            coords_valid.shape[0], size=[self.n_rays], replace=False
+        #        )  # 从 0 ~ 40653-1 中选取 1024 个值
+        #        select_coords = coords_valid[
+        #            select_inds
+        #        ].long()  # 根据选取的索引值来取坐标
+        #        rays = self.rays[
+        #            proj_num, select_coords[:, 0], select_coords[:, 1]
+        #        ]  # self.rays: [50, 256, 256, 6], index 决定了取哪一个角度或样例，后两项决定了横纵坐标
+        #        projs = projections[proj_num, select_coords[:, 0], select_coords[:, 1]]
+        #        pts, _, _, _ = get_pts(
+        #            rays,
+        #            self.n_samples,
+        #        )
+        #        pts = pts.reshape(-1, 3)
+        #        q = coord_to_dif_base(pts)
+        #        cl = []
+        #        for other_proj_num in range(self.n_views):
+        #            coords = self.geo.project(q, self.angles[other_proj_num])
+        #            # coords -> (-1, 1)
+        #            coords = torch.tensor(
+        #                coords, dtype=torch.float32, device=self.device
+        #            )
+        #            cl.append(coords)
+        #        coords = torch.stack(cl, dim=0)
+        #        #
+        #        image_pts = index_3d(image, pts)
+        #        projs_list.append(projs)
+        #        rays_list.append(rays)
+        #        pts_list.append(pts)
+        #        image_pts_list.append(image_pts)
+        #        coords_list.append(coords)
+
+        #    image_pts = torch.stack(image_pts_list, dim=0)
+        #    pts = torch.stack(pts_list, dim=0)
+        #    rays = torch.stack(rays_list, dim=0)
+        #    projs = torch.stack(projs_list, dim=0)
+        #    coords = torch.stack(coords_list, dim=0)
+        #    coords = coords.permute(1, 0, 2, 3)
+        #    coords = coords.reshape(self.n_views, -1, 2)
+
+        #    return {
+        #        "projs": projs,
+        #        "rays": rays,
+        #        "pts:": pts,
+        #        "image": image_pts,
+        #        "projections": projections,
+        #        "proj_pts": coords,
+        #    }
+
+        # elif self.type == "val":
+        #    name = self.cfg["eval"][index]
+        #    image_path = self.cfg["image"].format(name)
+        #    image = read_nifti(image_path)
+        #    image = torch.tensor(image, dtype=torch.float32, device=self.device)
+        #    projection_path = self.cfg["projections"].format(name)
+        #    projections = pickle.load(open(projection_path, "rb"))
+        #    projections = torch.tensor(
+        #        projections, dtype=torch.float32, device=self.device
+        #    )
+        #    projections = projections
+        #    projs_list = []
+        #    rays_list = []
+        #    pts_list = []
+        #    image_pts_list = []
+        #    coords_list = []
+        #    pts = self.voxels.reshape(-1, 3)
+        #    q = coord_to_dif_base(pts)
+        #    cl = []
+        #    for other_proj_num in range(self.n_views):
+        #        coords = self.geo.project(q, self.angles[other_proj_num])
+        #        coords = torch.tensor(coords, dtype=torch.float32, device=self.device)
+        #        cl.append(coords)
+        #    coords = torch.stack(cl, dim=0)
+        #    return {
+        #        "projs": projections,
+        #        "pts:": pts,
+        #        "image": image,
+        #        "projections": projections,
+        #        "proj_pts": coords,
+        #    }
+        # print("??????")
+        # return {}
         if self.type == "train":
             # stx()
             """
@@ -247,63 +360,22 @@ class MultiTIGREDataset(Dataset):
             projections = torch.tensor(
                 projections, dtype=torch.float32, device=self.device
             )
-            projections = projections
-            projs_list = []
-            rays_list = []
-            pts_list = []
-            image_pts_list = []
-            coords_list = []
-            for proj_num in range(self.n_views):
-                projs_valid = (projections[proj_num] > 0).flatten()
-                coords_valid = self.coords[
-                    projs_valid
-                ]  # [65536, 2] -> [40653, 2], 将布尔值矩阵当做索引，可能是因为并不是所有的
-                select_inds = np.random.choice(
-                    coords_valid.shape[0], size=[self.n_rays], replace=False
-                )  # 从 0 ~ 40653-1 中选取 1024 个值
-                select_coords = coords_valid[
-                    select_inds
-                ].long()  # 根据选取的索引值来取坐标
-                rays = self.rays[
-                    proj_num, select_coords[:, 0], select_coords[:, 1]
-                ]  # self.rays: [50, 256, 256, 6], index 决定了取哪一个角度或样例，后两项决定了横纵坐标
-                projs = projections[proj_num, select_coords[:, 0], select_coords[:, 1]]
-                pts, _, _, _ = get_pts(
-                    rays,
-                    self.n_samples,
-                )
-                pts = pts.reshape(-1, 3)
-                q = coord_to_dif_base(pts)
-                cl = []
-                for other_proj_num in range(self.n_views):
-                    coords = self.geo.project(q, self.angles[other_proj_num])
-                    # coords -> (-1, 1)
-                    coords = torch.tensor(
-                        coords, dtype=torch.float32, device=self.device
-                    )
-                    cl.append(coords)
-                coords = torch.stack(cl, dim=0)
-                #
-                image_pts = index_3d(image, pts)
-                projs_list.append(projs)
-                rays_list.append(rays)
-                pts_list.append(pts)
-                image_pts_list.append(image_pts)
-                coords_list.append(coords)
-
-            image_pts = torch.stack(image_pts_list, dim=0)
-            pts = torch.stack(pts_list, dim=0)
-            rays = torch.stack(rays_list, dim=0)
-            projs = torch.stack(projs_list, dim=0)
-            coords = torch.stack(coords_list, dim=0)
-            coords = coords.permute(1, 0, 2, 3)
-            coords = coords.reshape(self.n_views, -1, 2)
+            pts = self.voxels.reshape(-1, 3)
+            points = self.sample_points(self.points)
+            q = coord_to_dif_base(points)
+            values = index_3d(image, points)
+            cl = []
+            for other_proj_num in range(self.n_views):
+                coords = self.geo.project(q, self.angles[other_proj_num])
+                coords = torch.tensor(coords, dtype=torch.float32, device=self.device)
+                cl.append(coords)
+            coords = torch.stack(cl, dim=0)
 
             return {
-                "projs": projs,
-                "rays": rays,
-                "pts:": pts,
-                "image": image_pts,
+                "projs": projections,
+                # "rays": rays,
+                "pts:": points,
+                "image": values,
                 "projections": projections,
                 "proj_pts": coords,
             }
@@ -319,11 +391,6 @@ class MultiTIGREDataset(Dataset):
                 projections, dtype=torch.float32, device=self.device
             )
             projections = projections
-            projs_list = []
-            rays_list = []
-            pts_list = []
-            image_pts_list = []
-            coords_list = []
             pts = self.voxels.reshape(-1, 3)
             q = coord_to_dif_base(pts)
             cl = []
@@ -339,8 +406,17 @@ class MultiTIGREDataset(Dataset):
                 "projections": projections,
                 "proj_pts": coords,
             }
-        print("??????")
         return {}
+
+    def sample_points(self, points, values=None):
+        choice = np.random.choice(len(points), size=self.npoint, replace=False)
+        points = points[choice]
+        if values is not None:
+            values = values[choice]
+            values = values.astype(float) / 255.0
+            return points, values
+        else:
+            return points
 
     # 此处的 geo: ConeGeometry 表示什么？圆锥形几何
     # 冒号是类型建议符，告诉程序员希望传入的实参的类型
