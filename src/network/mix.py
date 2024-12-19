@@ -93,16 +93,16 @@ class DIF_Net(nn.Module):
         num_views,
         combine,
         mid_ch=128,
-        image_encoding="unet",
+        image_encoding="unet3",
         position_encoding="hashgrid",
     ):
         super().__init__()
         self.combine = combine
         if image_encoding == "unet":
-            self.image_encoder = "unet"
+            self.image_encoding = "unet"
             self.image_encoder = UNet(1, mid_ch)
         else:
-            self.image_encoder = "unet3"
+            self.image_encoding = "unet3"
             self.image_encoder = UNet3Plus(mid_ch, fast_up=False, use_cgm=False)
         self.position_encoder = get_encoder(position_encoding)
 

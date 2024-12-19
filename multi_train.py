@@ -26,7 +26,6 @@ print("!!!!!!", torch.cuda.is_available)
 
 # os.environ["CUDA_DEVICE_ORDER"] = 'PCI_BUS_ID'
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
-os.environ["CUDA_HOME"] = "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.3"
 
 from src.config.configloading import load_config
 from src.render import render_dif, run_network, get_pts
