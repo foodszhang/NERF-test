@@ -7,6 +7,7 @@ from .unet import UNet
 from .unet3 import UNet3Plus
 from .point_classifier import SurfaceClassifier
 from .network import DensityNetwork
+from src.encoder import get_encoder
 
 
 def coord_to_dif(points):
@@ -87,15 +88,23 @@ class MixNet(nn.Module):
 
 
 class DIF_Net(nn.Module):
-    def __init__(self, num_views, combine, mid_ch=128, encoder="unet"):
+    def __init__(
+        self,
+        num_views,
+        combine,
+        mid_ch=128,
+        image_encoding="unet",
+        position_encoding="hashgrid",
+    ):
         super().__init__()
         self.combine = combine
-        if encoder == "unet":
-            self.encoder = "unet"
+        if image_encoding == "unet":
+            self.image_encoder = "unet"
             self.image_encoder = UNet(1, mid_ch)
         else:
-            self.encoder = "unet3"
+            self.image_encoder = "unet3"
             self.image_encoder = UNet3Plus(mid_ch, fast_up=False, use_cgm=False)
+        self.position_encoder = get_encoder(position_encoding)
 
         if self.combine == "mlp":
             self.view_mixer = MLP([num_views, num_views // 2, 1])
@@ -111,7 +120,7 @@ class DIF_Net(nn.Module):
         b, m, w, h = projs.shape
         projs = projs.reshape(b * m, 1, w, h)  # B', C, W, H
         if self.training:
-            if self.encoder == "unet3":
+            if self.image_encoding == "unet3":
                 proj_feats = self.image_encoder(projs)["final_pred"]
             else:
                 proj_feats = self.image_encoder(projs)
