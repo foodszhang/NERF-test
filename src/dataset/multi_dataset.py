@@ -406,7 +406,7 @@ class MultiTIGREDataset(Dataset):
             coords = torch.stack(cl, dim=0)
             return {
                 "projs": projections,
-                "pts:": pts,
+                "pts": pts,
                 "image": values,
                 "projections": projections,
                 "proj_pts": coords,

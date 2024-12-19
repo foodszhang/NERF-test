@@ -188,7 +188,6 @@ class DIF_Net(nn.Module):
         q = self.position_encoder(data["pts"], 0.2)  # B, N, 32
         q = q.permute(0, 2, 1)
         p_feats = torch.cat([p_feats, q], dim=1)
-        print("!!!!!qweqweqwe", p_feats.shape)
 
         p_pred = self.point_classifier(p_feats)
         return p_pred
