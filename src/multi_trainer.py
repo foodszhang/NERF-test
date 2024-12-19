@@ -171,7 +171,7 @@ class Trainer:
 
             # Evaluate
             self.idx_epoch = idx_epoch
-            # self.warmup()
+            self.warmup()
             if (
                 (idx_epoch % self.i_eval == 0 or idx_epoch == self.epochs)
                 and self.i_eval > 0
