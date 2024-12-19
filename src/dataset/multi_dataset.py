@@ -362,7 +362,7 @@ class MultiTIGREDataset(Dataset):
                 projections, dtype=torch.float32, device=self.device
             )
             pts = self.voxels.reshape(-1, 3)
-            points = self.sample_points(self.points)
+            points = self.sample_points(pts)
             q = coord_to_dif_base(points)
             values = index_3d(image, points)
             cl = []
@@ -394,7 +394,7 @@ class MultiTIGREDataset(Dataset):
             projections = projections
             pts = self.voxels.reshape(-1, 3)
             q = coord_to_dif_base(pts)
-            values = index_3d(image, pts)
+            # values = index_3d(image, pts)
             cl = []
             for other_proj_num in range(self.n_views):
                 coords = self.geo.project(q, self.angles[other_proj_num])
@@ -404,7 +404,7 @@ class MultiTIGREDataset(Dataset):
             return {
                 "projs": projections,
                 "pts:": pts,
-                "image": values,
+                "image": image,
                 "projections": projections,
                 "proj_pts": coords,
             }
