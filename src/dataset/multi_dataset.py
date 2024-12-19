@@ -356,7 +356,7 @@ class MultiTIGREDataset(Dataset):
             image_path = self.cfg["image"].format(name)
             image = read_nifti(image_path)
             image_prob = image.reshape(-1)
-            image_prob = image_prob + 0.05
+            image_prob = image_prob + 0.1
             image_prob = image_prob / image_prob.sum()
             image = torch.tensor(image, dtype=torch.float32, device=self.device)
             projection_path = self.cfg["projections"].format(name)
@@ -394,7 +394,6 @@ class MultiTIGREDataset(Dataset):
             projections = torch.tensor(
                 projections, dtype=torch.float32, device=self.device
             )
-            projections = projections
             pts = self.voxels.reshape(-1, 3)
             q = coord_to_dif_base(pts)
             values = index_3d(image, pts)
@@ -413,10 +412,14 @@ class MultiTIGREDataset(Dataset):
             }
         return {}
 
-    def sample_points(self, points, values):
-        choice = np.random.choice(
-            len(points), size=self.npoint, replace=False, p=values
-        )
+    def sample_points(self, points, values=None):
+        if values is None:
+            choice = np.random.choice(len(points), size=self.npoint, replace=False)
+        else:
+            choice = np.random.choice(
+                len(points), size=self.npoint, replace=False, p=values
+            )
+
         points = points[choice]
         return points
 
