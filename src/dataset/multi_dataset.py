@@ -361,6 +361,9 @@ class MultiTIGREDataset(Dataset):
             projections = torch.tensor(
                 projections, dtype=torch.float32, device=self.device
             )
+            projections = (projections - projections.min()) / (
+                projections.max() - projections.min()
+            )
             pts = self.voxels.reshape(-1, 3)
             points = self.sample_points(pts)
             q = coord_to_dif_base(points)
@@ -375,7 +378,7 @@ class MultiTIGREDataset(Dataset):
             return {
                 "projs": projections,
                 # "rays": rays,
-                "pts:": points,
+                "pts": points,
                 "image": values,
                 "projections": projections,
                 "proj_pts": coords,
@@ -401,7 +404,6 @@ class MultiTIGREDataset(Dataset):
                 coords = torch.tensor(coords, dtype=torch.float32, device=self.device)
                 cl.append(coords)
             coords = torch.stack(cl, dim=0)
-            print("123123123qqqq", pts.shape, coords.shape)
             return {
                 "projs": projections,
                 "pts:": pts,
