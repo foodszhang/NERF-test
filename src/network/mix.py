@@ -35,9 +35,7 @@ class MLP(nn.Module):
             layers += [nn.Conv2d(mlp_list[i], mlp_list[i + 1], kernel_size=1)]
             if use_bn:
                 layers += [nn.BatchNorm2d(mlp_list[i + 1])]
-            layers += [
-                nn.LeakyReLU(inplace=True),
-            ]
+            layers += [nn.LeakyReLU(inplace=True)]
 
         self.layer = nn.Sequential(*layers)
 
@@ -109,8 +107,11 @@ class DIF_Net(nn.Module):
         if self.combine == "mlp":
             self.view_mixer = MLP([num_views, num_views // 2, 1])
 
+        # self.point_classifier = SurfaceClassifier(
+        #    [mid_ch + 32, 256, 64, 16, 1], no_residual=False
+        # )
         self.point_classifier = SurfaceClassifier(
-            [mid_ch + 32, 256, 64, 16, 1], no_residual=False
+            [mid_ch, 256, 64, 16, 1], no_residual=False
         )
         print(f"DIF_Net, mid_ch: {mid_ch}, combine: {self.combine}")
 
@@ -185,9 +186,9 @@ class DIF_Net(nn.Module):
 
         # 3. point-wise classification
         # p_feats B, 128 , N
-        q = self.position_encoder(data["pts"], 0.2)  # B, N, 32
-        q = q.permute(0, 2, 1)
-        p_feats = torch.cat([p_feats, q], dim=1)
+        # q = self.position_encoder(data["pts"], 0.2)  # B, N, 32
+        # q = q.permute(0, 2, 1)
+        # p_feats = torch.cat([p_feats, q], dim=1)
 
         p_pred = self.point_classifier(p_feats)
         return p_pred
