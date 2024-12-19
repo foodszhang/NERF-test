@@ -2,6 +2,7 @@ import os
 import os.path as osp
 import json
 import torch
+import math
 from torch.utils.tensorboard import SummaryWriter
 import torch
 from tqdm import tqdm, trange
@@ -13,11 +14,16 @@ from .dataset import MultiTIGREDataset as Dataset
 
 from .utils import gen_log, time2file_name
 import datetime
+from torch.optim import lr_scheduler
 
 from .network import get_network
 
 # from .encoder import get_encoder
 from pdb import set_trace as stx
+
+
+def one_cycle(y1=0.0, y2=1.0, steps=100):
+    return lambda x: ((1 - math.cos(x * math.pi / steps)) / 2) * (y2 - y1) + y1
 
 
 class Trainer:
@@ -44,6 +50,7 @@ class Trainer:
         os.makedirs(self.evaldir, exist_ok=True)
         self.logger = gen_log(self.expdir)
         self.net_fine = None
+        self.idx_epoch = 0
 
         # Dataset，读数据，dataloader
         """
@@ -94,10 +101,14 @@ class Trainer:
         self.optimizer = torch.optim.AdamW(grad_vars, lr=cfg["train"]["lrate"])
         # self.lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
         #     optimizer=self.optimizer, gamma=cfg["train"]["lrate_gamma"])
-        self.lr_scheduler = torch.optim.lr_scheduler.StepLR(
-            optimizer=self.optimizer,
-            step_size=cfg["train"]["lrate_step"],
-            gamma=cfg["train"]["lrate_gamma"],
+        # self.lr_scheduler = torch.optim.lr_scheduler.StepLR(
+        #    optimizer=self.optimizer,
+        #    step_size=cfg["train"]["lrate_step"],
+        #    gamma=cfg["train"]["lrate_gamma"],
+        # )
+        self.lr_func = one_cycle(1, cfg["train"]["lrf"], self.epochs)
+        self.lr_scheduler = lr_scheduler.LambdaLR(
+            self.optimizer, lr_lambda=self.lr_func
         )
 
         # Load checkpoints
@@ -121,6 +132,24 @@ class Trainer:
         json_hp = json.dumps(hp, indent=2)
         return "".join("\t" + line for line in json_hp.splitlines(True))
 
+    def warmup(self):
+        ni = self.global_step
+
+        warmup_iters = max(500, len(self.train_dloader) * 3)
+        if ni <= warmup_iters:
+            xi = [0, warmup_iters]  # x interp
+            for j, x in enumerate(self.optimizer.param_groups):
+                x["lr"] = np.interp(
+                    ni,
+                    xi,
+                    [
+                        0.1 if j == 2 else 0.0,
+                        x["initial_lr"] * self.lr_scheduler(self.idx_epoch),
+                    ],
+                )
+                if "momentum" in x:
+                    x["momentum"] = np.interp(ni, xi, [0.8, 0.9])
+
     def start(self):
         """
         Main loop.
@@ -141,6 +170,8 @@ class Trainer:
         for idx_epoch in range(self.epoch_start, self.epochs + 1):
 
             # Evaluate
+            self.idx_epoch = idx_epoch
+            self.warmup()
             if (
                 (idx_epoch % self.i_eval == 0 or idx_epoch == self.epochs)
                 and self.i_eval > 0

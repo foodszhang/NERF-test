@@ -365,7 +365,10 @@ class MultiTIGREDataset(Dataset):
                 projections.max() - projections.min()
             )
             pts = self.voxels.reshape(-1, 3)
-            points = self.sample_points(pts)
+            image_prob = image.reshape(-1)
+            image_prob = image + 0.01
+            image_prob = torch.clip(image_prob, 0, 0.9)
+            points = self.sample_points(pts, image_prob)
             q = coord_to_dif_base(points)
             values = index_3d(image, points)
             cl = []
@@ -413,15 +416,12 @@ class MultiTIGREDataset(Dataset):
             }
         return {}
 
-    def sample_points(self, points, values=None):
-        choice = np.random.choice(len(points), size=self.npoint, replace=False)
+    def sample_points(self, points, values):
+        choice = np.random.choice(
+            len(points), size=self.npoint, replace=False, p=values
+        )
         points = points[choice]
-        if values is not None:
-            values = values[choice]
-            values = values.astype(float) / 255.0
-            return points, values
-        else:
-            return points
+        return points
 
     # 此处的 geo: ConeGeometry 表示什么？圆锥形几何
     # 冒号是类型建议符，告诉程序员希望传入的实参的类型
