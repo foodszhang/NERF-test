@@ -103,7 +103,8 @@ class DIF_Net(nn.Module):
             self.image_encoding = "unet3"
             self.image_encoder = UNet3Plus(mid_ch, fast_up=False, use_cgm=False)
         self.position_encoder = get_encoder(position_encoding)
-        self.mlp = DensityNetwork_debug(mid_ch + 32)
+        # self.mlp = DensityNetwork_debug(mid_ch + 32)
+        self.mlp = DensityNetwork_debug(mid_ch)
 
         if self.combine == "mlp":
             self.view_mixer = MLP([num_views, num_views // 2, 1])
@@ -187,9 +188,9 @@ class DIF_Net(nn.Module):
 
         # 3. point-wise classification
         # p_feats B, 128 , N
-        q = self.position_encoder(data["pts"], 0.2)  # B, N, 32
-        q = q.permute(0, 2, 1)
-        p_feats = torch.cat([p_feats, q], dim=1)
+        # q = self.position_encoder(data["pts"], 0.2)  # B, N, 32
+        # q = q.permute(0, 2, 1)
+        # p_feats = torch.cat([p_feats, q], dim=1)
 
         # p_pred = self.point_classifier(p_feats)
         p_feats = p_feats.permute(0, 2, 1)
