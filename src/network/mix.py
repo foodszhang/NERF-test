@@ -91,7 +91,7 @@ class DIF_Net(nn.Module):
         num_views,
         combine,
         mid_ch=128,
-        image_encoding="unet3",
+        image_encoding="unet",
         position_encoding="hashgrid",
     ):
         super().__init__()
