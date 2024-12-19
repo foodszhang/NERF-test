@@ -355,6 +355,9 @@ class MultiTIGREDataset(Dataset):
             name = self.cfg["train"][index]
             image_path = self.cfg["image"].format(name)
             image = read_nifti(image_path)
+            image_prob = image.reshape(-1)
+            image_prob = image + 0.01
+            image_prob = np.clip(image_prob, 0, 0.9)
             image = torch.tensor(image, dtype=torch.float32, device=self.device)
             projection_path = self.cfg["projections"].format(name)
             projections = pickle.load(open(projection_path, "rb"))

@@ -144,7 +144,7 @@ class Trainer:
                     xi,
                     [
                         0.1 if j == 2 else 0.0,
-                        x["initial_lr"] * self.lr_scheduler(self.idx_epoch),
+                        x["initial_lr"] * self.lr_func(self.idx_epoch),
                     ],
                 )
                 if "momentum" in x:
