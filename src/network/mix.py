@@ -1,4 +1,4 @@
-import torch
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
@@ -104,7 +104,7 @@ class DIF_Net(nn.Module):
             self.image_encoder = UNet3Plus(mid_ch, fast_up=False, use_cgm=False)
         self.position_encoder = get_encoder(position_encoding)
         # self.mlp = DensityNetwork_debug(mid_ch + 32)
-        self.mlp = DensityNetwork_debug(mid_ch+32)
+        self.mlp = DensityNetwork_debug(mid_ch + 32)
 
         if self.combine == "mlp":
             self.view_mixer = MLP([num_views, num_views // 2, 1])
