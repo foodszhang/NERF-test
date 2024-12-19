@@ -356,8 +356,8 @@ class MultiTIGREDataset(Dataset):
             image_path = self.cfg["image"].format(name)
             image = read_nifti(image_path)
             image_prob = image.reshape(-1)
-            image_prob = image + 0.01
-            image_prob = np.clip(image_prob, 0, 0.9)
+            image_prob = image_prob + 0.05
+            image_prob = image_prob / image_prob.sum()
             image = torch.tensor(image, dtype=torch.float32, device=self.device)
             projection_path = self.cfg["projections"].format(name)
             projections = pickle.load(open(projection_path, "rb"))
@@ -368,9 +368,7 @@ class MultiTIGREDataset(Dataset):
                 projections.max() - projections.min()
             )
             pts = self.voxels.reshape(-1, 3)
-            image_prob = image.reshape(-1)
-            image_prob = image + 0.01
-            image_prob = torch.clip(image_prob, 0, 0.9)
+            print(image.)
             points = self.sample_points(pts, image_prob)
             q = coord_to_dif_base(points)
             values = index_3d(image, points)
@@ -400,7 +398,10 @@ class MultiTIGREDataset(Dataset):
             projections = torch.tensor(
                 projections, dtype=torch.float32, device=self.device
             )
-            projections = projections
+            projections = (projections - projections.min()) / (
+                projections.max() - projections.min()
+            )
+            #projections = projections
             pts = self.voxels.reshape(-1, 3)
             q = coord_to_dif_base(pts)
             values = index_3d(image, pts)
