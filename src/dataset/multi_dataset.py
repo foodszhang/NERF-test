@@ -76,7 +76,7 @@ def index_2d(feat, uv):
     samples = torch.nn.functional.grid_sample(
         feat, uv, align_corners=True
     )  # [B, C, N, 1]
-    return samples[0, 0:, :, :, 0]  # [B, C, N]
+    return samples[0, :, :, 0]  # [B, C, N]
 
 
 # 这里的各项参数代表的物理含义可以在哪查到呢？
