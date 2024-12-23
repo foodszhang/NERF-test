@@ -168,7 +168,7 @@ class ConeGeometry(object):
 def gen_test_array():
     a = np.linspace(0, 1, 256)
     b = np.linspace(0, 1, 256)
-    q = np.zeros((256, 256), dtype=np.float32)
+    q = np.zeros((256, 256, 3), dtype=np.float32)
     for i in range(256):
         for j in range(256):
             q[i, j] = (0, a[i], b[j])
