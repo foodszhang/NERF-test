@@ -173,7 +173,7 @@ def gen_test_array():
     q = np.zeros((256, 256, 3), dtype=np.float32)
     for i in range(256):
         for j in range(256):
-            q[i, j] = (a[i], 0.5, b[j])
+            q[i, j] = (0.5, a[i], b[j])
     return torch.tensor(q, dtype=torch.float32)
 
 
@@ -385,16 +385,20 @@ class MultiTIGREDataset(Dataset):
             q_coords = self.geo.project(tq, self.angles[0])
             q_coords = torch.tensor(q_coords, dtype=torch.float32, device=self.device)
             # print("3123123123", q_coords, q_coords.shape)
-            print("asdasdasd", (q_coords + 1) * 128)
             q_coords = q_coords.reshape(256, 256, 2)
             q_r = index_2d(projections[0], q_coords)
             q_r = q_r.detach().cpu().numpy()
             q_r = q_r.reshape(256, 256) * 256
-            print("123123123", q_r)
+            rr = np.zeros((256, 256))
+            print("asdasdasd", (q_coords + 1) * 128)
+            for i in range(256):
+                for j in range(256):
+                    rr[int(q_coords[i][j][0])][int(q_coords[i][j][1])] = q_r[i, j]
+            print("123123123", rr)
             q_r = q_r.astype(np.uint8)
             t_r = projections[0].detach().cpu().numpy()
             t_r = (t_r * 256).astype(np.uint8)
-            ski.io.imsave("test.png", q_r)
+            ski.io.imsave("test.png", rr)
             ski.io.imsave("result.png", t_r)
             import sys
 
