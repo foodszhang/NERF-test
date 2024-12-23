@@ -114,9 +114,9 @@ class DIF_Net(nn.Module):
         # self.point_classifier = SurfaceClassifier(
         #    [mid_ch + 32, 256, 64, 16, 1], no_residual=False
         # )
-        # self.point_classifier = SurfaceClassifier(
-        #    [mid_ch, 256, 64, 16, 1], no_residual=False
-        # )
+        self.point_classifier = SurfaceClassifier(
+            [mid_ch, 256, 64, 16, 1], no_residual=False
+        )
         print(f"DIF_Net, mid_ch: {mid_ch}, combine: {self.combine}")
 
     def forward(self, data, eval_npoint=102400):
@@ -175,19 +175,19 @@ class DIF_Net(nn.Module):
                 f_list.append(p_feats)
             p_feats = torch.cat(f_list, dim=1)
             p_list.append(p_feats)
-        # p_feats = torch.stack(p_list, dim=-1)  # B, C, N, M
-        p_feats = torch.cat(p_list, dim=1)  # B, C, N, M
+        p_feats = torch.stack(p_list, dim=-1)  # B, C, N, M
+        # p_feats = torch.cat(p_list, dim=1)  # B, C, N, M
 
         # 2. cross-view fusion
-        # if self.combine == "max":
-        #    p_feats = F.max_pool2d(p_feats, (1, n_view))
-        #    p_feats = p_feats.squeeze(-1)  # B, C, N
-        # elif self.combine == "mlp":
-        #    p_feats = p_feats.permute(0, 3, 1, 2)
-        #    p_feats = self.view_mixer(p_feats)
-        #    p_feats = p_feats.squeeze(1)
-        # else:
-        #    raise NotImplementedError
+        if self.combine == "max":
+            p_feats = F.max_pool2d(p_feats, (1, n_view))
+            p_feats = p_feats.squeeze(-1)  # B, C, N
+        elif self.combine == "mlp":
+            p_feats = p_feats.permute(0, 3, 1, 2)
+            p_feats = self.view_mixer(p_feats)
+            p_feats = p_feats.squeeze(1)
+        else:
+            raise NotImplementedError
 
         # 3. point-wise classification
         # p_feats B, 128 , N
@@ -197,9 +197,9 @@ class DIF_Net(nn.Module):
         # p_feats = (p_feats - p_feats.min()) / (p_feats.max() - p_feats.min())
         # p_feats = torch.cat([p_feats, q], dim=1)
 
-        # p_pred = self.point_classifier(p_feats)
-        print("123123123", p_feats.max(), p_feats.min())
-        p_feats = p_feats.permute(0, 2, 1)
-        p_pred = self.mlp(p_feats)
-        p_pred = p_pred.permute(0, 2, 1)
+        p_pred = self.point_classifier(p_feats)
+        # print("123123123", p_feats.max(), p_feats.min())
+        # p_feats = p_feats.permute(0, 2, 1)
+        # p_pred = self.mlp(p_feats)
+        # p_pred = p_pred.permute(0, 2, 1)
         return p_pred
