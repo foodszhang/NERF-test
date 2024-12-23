@@ -66,14 +66,17 @@ def index_3d(image, uv, max_val=0.1275, min_val=-0.1275):
 
 def index_2d(feat, uv):
     # https://zhuanlan.zhihu.com/p/137271718
-    # feat: [B, C, H, W]
+    # feat: [H, W]
     # uv: [B, N, 2]
+    feat = feat.unsqueeze(0)
+    feat = feat.unsqueeze(0)
+    uv = uv.unsqueeze(0)  # [B, N, 1, 3]
     uv = uv.unsqueeze(2)  # [B, N, 1, 2]
     feat = feat.transpose(2, 3)  # [W, H]
     samples = torch.nn.functional.grid_sample(
         feat, uv, align_corners=True
     )  # [B, C, N, 1]
-    return samples[:, :, :, 0]  # [B, C, N]
+    return samples[0, 0:, :, :, 0]  # [B, C, N]
 
 
 # 这里的各项参数代表的物理含义可以在哪查到呢？
@@ -386,7 +389,9 @@ class MultiTIGREDataset(Dataset):
             q_r = q_r.detach().cpu().numpy()
             q_r = q_r.reshape(256, 256)
             q_r = q_r.astype(np.uint8)
+            t_r = projections[0].detach().cpu().numpy().astype(np.uint8)
             ski.io.imsave("test.png", q_r)
+            ski.io.imsave("result.png", t_r)
             import sys
 
             sys.exit(0)
