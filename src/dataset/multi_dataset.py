@@ -387,9 +387,10 @@ class MultiTIGREDataset(Dataset):
             print("3123123123", q_coords, q_coords.shape)
             q_r = index_2d(projections[0], q_coords)
             q_r = q_r.detach().cpu().numpy()
-            q_r = q_r.reshape(256, 256)
+            q_r = q_r.reshape(256, 256) * 256
             q_r = q_r.astype(np.uint8)
-            t_r = projections[0].detach().cpu().numpy().astype(np.uint8)
+            t_r = projections[0].detach().cpu().numpy()
+            t_r = (t_r * 256).astype(np.uint8)
             ski.io.imsave("test.png", q_r)
             ski.io.imsave("result.png", t_r)
             import sys
