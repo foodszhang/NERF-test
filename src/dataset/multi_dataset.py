@@ -71,12 +71,11 @@ def index_2d(feat, uv):
     feat = feat.unsqueeze(0)
     feat = feat.unsqueeze(0)
     uv = uv.unsqueeze(0)  # [B, N, 1, 3]
-    uv = uv.unsqueeze(2)  # [B, N, 1, 2]
-    feat = feat.transpose(2, 3)  # [W, H]
+    # feat = feat.transpose(2, 3)  # [W, H]
     samples = torch.nn.functional.grid_sample(
         feat, uv, align_corners=True
     )  # [B, C, N, 1]
-    return samples[0, :, :, 0]  # [B, C, N]
+    return samples[0, 0, :, :]  # [B, C, N]
 
 
 # 这里的各项参数代表的物理含义可以在哪查到呢？
@@ -386,6 +385,7 @@ class MultiTIGREDataset(Dataset):
             q_coords = self.geo.project(tq, self.angles[0])
             q_coords = torch.tensor(q_coords, dtype=torch.float32, device=self.device)
             print("3123123123", q_coords, q_coords.shape)
+            q_coords = q_coords.reshape(256, 256, 2)
             q_r = index_2d(projections[0], q_coords)
             q_r = q_r.detach().cpu().numpy()
             q_r = q_r.reshape(256, 256) * 256
