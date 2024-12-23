@@ -375,7 +375,7 @@ class MultiTIGREDataset(Dataset):
                 coords = torch.tensor(coords, dtype=torch.float32, device=self.device)
                 cl.append(coords)
             coords = torch.stack(cl, dim=0)
-            print('123123123', coords.max(), coords.min()))
+            print("123123123", coords.max(), coords.min())
 
             return {
                 "projs": projections,
