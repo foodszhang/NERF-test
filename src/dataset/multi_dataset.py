@@ -11,6 +11,7 @@ from pdb import set_trace as stx
 from src.render import get_pts
 import SimpleITK as sitk
 from copy import deepcopy
+import skimage as ski
 
 
 def read_nifti(path):
@@ -162,6 +163,19 @@ class ConeGeometry(object):
         d_points *= 2  # NOTE: some points may fall outside [-1, 1]
 
         return d_points
+
+
+def gen_test_array():
+    a = np.linspace(0, 1, 256)
+    b = np.linspace(0, 1, 256)
+    q = np.zeros((256, 256), dtype=np.float32)
+    for i in range(256):
+        for j in range(256):
+            q[i, j] = (0, a[i], b[j])
+    return torch.tensor(q, dtype=torch.float32)
+
+
+Q = gen_test_array()
 
 
 # dataloader，把数据做成 TIGRE 数据类型
@@ -364,6 +378,18 @@ class MultiTIGREDataset(Dataset):
             projections = torch.tensor(
                 projections, dtype=torch.float32, device=self.device
             )
+            q_coords = self.geo.project(Q, self.angles[0])
+            q_coords = torch.tensor(q_coords, dtype=torch.float32)
+            q_r = index_2d(projections, q_coords)
+            print("3123123123", q_r, q_r.shape)
+            q_r = q_r.detach().cpu().numpy()
+            q_r = q_r.reshape(256, 256)
+            q_r = q_r.astype(np.uint8)
+            ski.io.imsave("test.png", q_r)
+            import sys
+
+            sys.exit(0)
+
             projections = projections / projections.max()
             pts = self.voxels.reshape(-1, 3)
             points = self.sample_points(pts, image_prob)
@@ -371,6 +397,7 @@ class MultiTIGREDataset(Dataset):
             q = coord_to_dif_base(points)
             values = index_3d(image, points)
             cl = []
+
             for other_proj_num in range(self.n_views):
                 coords = self.geo.project(q, self.angles[other_proj_num])
                 coords = torch.tensor(coords, dtype=torch.float32, device=self.device)
