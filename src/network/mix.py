@@ -108,8 +108,8 @@ class DIF_Net(nn.Module):
         # self.mlp = DensityNetwork_debug(mid_ch * num_views + 32)
         self.mlp = DensityNetwork_debug(mid_ch * num_views)
 
-        # if self.combine == "mlp":
-        #    self.view_mixer = MLP([num_views, num_views // 2, 1])
+        if self.combine == "mlp":
+            self.view_mixer = MLP([num_views, num_views // 2, 1])
 
         # self.point_classifier = SurfaceClassifier(
         #    [mid_ch + 32, 256, 64, 16, 1], no_residual=False
