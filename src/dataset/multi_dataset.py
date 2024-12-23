@@ -71,7 +71,7 @@ def index_2d(feat, uv):
     feat = feat.unsqueeze(0)
     feat = feat.unsqueeze(0)
     uv = uv.unsqueeze(0)  # [B, N, 1, 3]
-    # feat = feat.transpose(2, 3)  # [W, H]
+    feat = feat.transpose(1, 2)  # [W, H]
     samples = torch.nn.functional.grid_sample(
         feat, uv, align_corners=True
     )  # [B, C, N, 1]
