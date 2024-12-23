@@ -390,8 +390,8 @@ class MultiTIGREDataset(Dataset):
             q_r = q_r.detach().cpu().numpy()
             q_r = q_r.reshape(256, 256) * 256
             rr = np.zeros((256, 256))
-            q_coords =  (q_coords + 1 ) * 128
-            print("asdasdasd", q_coords))
+            q_coords = (q_coords + 1) * 128
+            print("asdasdasd", q_coords)
             for i in range(256):
                 for j in range(256):
                     rr[int(q_coords[i][j][0])][int(q_coords[i][j][1])] = q_r[i, j]
