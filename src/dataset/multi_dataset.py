@@ -173,7 +173,7 @@ def gen_test_array():
     q = np.zeros((256, 256, 3), dtype=np.float32)
     for i in range(256):
         for j in range(256):
-            q[i, j] = (a[i], 0, b[j])
+            q[i, j] = (a[i], 0.5, b[j])
     return torch.tensor(q, dtype=torch.float32)
 
 
