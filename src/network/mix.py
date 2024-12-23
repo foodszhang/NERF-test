@@ -118,7 +118,7 @@ class DIF_Net(nn.Module):
         # )
         print(f"DIF_Net, mid_ch: {mid_ch}, combine: {self.combine}")
 
-    def forward(self, data, eval_npoint=300000):
+    def forward(self, data, eval_npoint=102400):
         # projection encoding
         projs = data["projections"]  # B, M, C, W, H
         b, m, w, h = projs.shape
@@ -174,7 +174,8 @@ class DIF_Net(nn.Module):
                 f_list.append(p_feats)
             p_feats = torch.cat(f_list, dim=1)
             p_list.append(p_feats)
-        p_feats = torch.stack(p_list, dim=-1)  # B, C, N, M
+        # p_feats = torch.stack(p_list, dim=-1)  # B, C, N, M
+        p_feats = torch.cat(p_list, dim=-1)  # B, C, N, M
         print("66666666", p_feats.max(), p_feats.min())
 
         # 2. cross-view fusion
