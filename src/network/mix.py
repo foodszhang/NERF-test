@@ -90,7 +90,7 @@ class DIF_Net(nn.Module):
         self,
         num_views,
         combine,
-        mid_ch=32,
+        mid_ch=64,
         image_encoding="unet3",
         position_encoding="hashgrid",
     ):
