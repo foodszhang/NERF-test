@@ -90,8 +90,8 @@ class DIF_Net(nn.Module):
         self,
         num_views,
         combine,
-        mid_ch=64,
-        image_encoding="unet",
+        mid_ch=32,
+        image_encoding="unet3",
         position_encoding="hashgrid",
     ):
         super().__init__()

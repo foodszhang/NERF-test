@@ -198,7 +198,7 @@ class MultiTIGREDataset(Dataset):
         points = points.reshape(3, -1)
         self.points = points.transpose(1, 0)  # N, 3
         self.points = torch.tensor(self.points, dtype=torch.float32, device=device)
-        self.npoint = 30000
+        self.npoint = 300000
         self.angles = np.linspace(0, 180 / 180 * np.pi, self.n_views + 1)[:-1]
         rays = self.get_rays(
             self.angles, self.geo, device
@@ -375,6 +375,7 @@ class MultiTIGREDataset(Dataset):
                 coords = torch.tensor(coords, dtype=torch.float32, device=self.device)
                 cl.append(coords)
             coords = torch.stack(cl, dim=0)
+            print('123123123', coords.max(), coords.min()))
 
             return {
                 "projs": projections,
