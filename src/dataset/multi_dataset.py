@@ -380,7 +380,7 @@ class MultiTIGREDataset(Dataset):
             )
             q_coords = self.geo.project(Q, self.angles[0])
             q_coords = torch.tensor(q_coords, dtype=torch.float32)
-            print("3123123123", q_r, q_r.shape)
+            print("3123123123", q_coords, q_coords.shape)
             q_r = index_2d(projections[0], q_coords)
             q_r = q_r.detach().cpu().numpy()
             q_r = q_r.reshape(256, 256)
