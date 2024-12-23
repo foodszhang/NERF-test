@@ -176,7 +176,6 @@ class DIF_Net(nn.Module):
             p_list.append(p_feats)
         # p_feats = torch.stack(p_list, dim=-1)  # B, C, N, M
         p_feats = torch.cat(p_list, dim=1)  # B, C, N, M
-        print("66666666", p_feats.max(), p_feats.min())
 
         # 2. cross-view fusion
         # if self.combine == "max":
@@ -193,8 +192,6 @@ class DIF_Net(nn.Module):
         # p_feats B, 128 , N
         q = self.position_encoder(data["pts"], 0.2)  # B, N, 32
         q = q.permute(0, 2, 1)
-        print("qweqweqwell", p_feats.shape, q.shape)
-        # print("!!!888888", q.max(), q.min(), p_feats.max(), p_feats.min())
         p_feats = torch.cat([p_feats, q], dim=1)
 
         # p_pred = self.point_classifier(p_feats)
