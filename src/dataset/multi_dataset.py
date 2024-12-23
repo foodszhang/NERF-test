@@ -393,8 +393,13 @@ class MultiTIGREDataset(Dataset):
             print("asdasdasd", (q_coords + 1) * 128)
             for i in range(256):
                 for j in range(256):
+                    print(
+                        "123123123",
+                        int(q_coords[i][j][0]),
+                        int(q_coords[i][j][1]),
+                        q_r[i, j],
+                    )
                     rr[int(q_coords[i][j][0])][int(q_coords[i][j][1])] = q_r[i, j]
-            print("123123123", rr)
             q_r = q_r.astype(np.uint8)
             t_r = projections[0].detach().cpu().numpy()
             t_r = (t_r * 256).astype(np.uint8)
