@@ -90,7 +90,7 @@ class DIF_Net(nn.Module):
         self,
         num_views,
         combine,
-        mid_ch=128,
+        mid_ch=32,
         image_encoding="unet",
         position_encoding="hashgrid",
     ):
@@ -103,18 +103,19 @@ class DIF_Net(nn.Module):
             self.image_encoding = "unet3"
             self.image_encoder = UNet3Plus(mid_ch, fast_up=False, use_cgm=False)
         self.position_encoder = get_encoder(position_encoding)
-        self.mlp = DensityNetwork_debug(mid_ch + 32)
+        # self.mlp = DensityNetwork_debug(mid_ch + 32)
         # self.mlp = DensityNetwork_debug(mid_ch)
+        self.mlp = DensityNetwork_debug(mid_ch * num_views + 32)
 
-        if self.combine == "mlp":
-            self.view_mixer = MLP([num_views, num_views // 2, 1])
+        # if self.combine == "mlp":
+        #    self.view_mixer = MLP([num_views, num_views // 2, 1])
 
         # self.point_classifier = SurfaceClassifier(
         #    [mid_ch + 32, 256, 64, 16, 1], no_residual=False
         # )
-        self.point_classifier = SurfaceClassifier(
-            [mid_ch, 256, 64, 16, 1], no_residual=False
-        )
+        # self.point_classifier = SurfaceClassifier(
+        #    [mid_ch, 256, 64, 16, 1], no_residual=False
+        # )
         print(f"DIF_Net, mid_ch: {mid_ch}, combine: {self.combine}")
 
     def forward(self, data, eval_npoint=300000):
@@ -177,21 +178,22 @@ class DIF_Net(nn.Module):
         print("66666666", p_feats.max(), p_feats.min())
 
         # 2. cross-view fusion
-        if self.combine == "max":
-            p_feats = F.max_pool2d(p_feats, (1, n_view))
-            p_feats = p_feats.squeeze(-1)  # B, C, N
-        elif self.combine == "mlp":
-            p_feats = p_feats.permute(0, 3, 1, 2)
-            p_feats = self.view_mixer(p_feats)
-            p_feats = p_feats.squeeze(1)
-        else:
-            raise NotImplementedError
+        # if self.combine == "max":
+        #    p_feats = F.max_pool2d(p_feats, (1, n_view))
+        #    p_feats = p_feats.squeeze(-1)  # B, C, N
+        # elif self.combine == "mlp":
+        #    p_feats = p_feats.permute(0, 3, 1, 2)
+        #    p_feats = self.view_mixer(p_feats)
+        #    p_feats = p_feats.squeeze(1)
+        # else:
+        #    raise NotImplementedError
 
         # 3. point-wise classification
         # p_feats B, 128 , N
         q = self.position_encoder(data["pts"], 0.2)  # B, N, 32
         q = q.permute(0, 2, 1)
-        print("!!!888888", q.max(), q.min(), p_feats.max(), p_feats.min())
+        print("qweqweqwell", p_feats.shape, q.shape)
+        # print("!!!888888", q.max(), q.min(), p_feats.max(), p_feats.min())
         p_feats = torch.cat([p_feats, q], dim=1)
 
         # p_pred = self.point_classifier(p_feats)
