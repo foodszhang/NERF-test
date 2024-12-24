@@ -121,7 +121,7 @@ class DIF_Net(nn.Module):
         # )
         print(f"DIF_Net, mid_ch: {mid_ch}, combine: {self.combine}")
 
-    def forward(self, data, eval_npoint=102400):
+    def forward(self, data, eval_npoint=10240):
         # projection encoding
         projs = data["projections"]  # B, M, C, W, H
         b, m, w, h = projs.shape
@@ -177,33 +177,34 @@ class DIF_Net(nn.Module):
                 f_list.append(p_feats)
             p_feats = torch.cat(f_list, dim=1)
             p_list.append(p_feats)
-        p_feats = torch.stack(p_list, dim=-1)  # B, C, N, M
-        # p_feats = torch.cat(p_list, dim=1)  # B, C, N, M
+        # p_feats = torch.stack(p_list, dim=-1)  # B, C, N, M
+        p_feats = torch.cat(p_list, dim=1)  # B, C, N, M
 
         # 2. cross-view fusion
-        # if self.combine == "max":
-        #    p_feats = F.max_pool2d(p_feats, (1, n_view))
-        #    p_feats = p_feats.squeeze(-1)  # B, C, N
-        # elif self.combine == "mlp":
-        #    p_feats = p_feats.permute(0, 3, 1, 2)
-        #    p_feats = self.view_mixer(p_feats)
-        #    p_feats = p_feats.squeeze(1)
-        # else:
-        #    raise NotImplementedError
+        if self.combine == "max":
+            p_feats = F.max_pool2d(p_feats, (1, n_view))
+            p_feats = p_feats.squeeze(-1)  # B, C, N
+        elif self.combine == "mlp":
+            p_feats = p_feats.permute(0, 3, 1, 2)
+            p_feats = self.view_mixer(p_feats)
+            p_feats = p_feats.squeeze(1)
+        else:
+            raise NotImplementedError
 
         # 3. point-wise classification
         # p_feats B, 128 , N
         q = self.position_encoder(data["pts"], 0.2)  # B, N, 32
-        q = q.permute(0, 2, 1)
+        # q = q.permute(0, 2, 1)
         # q = (q - q.min()) / (q.max() - q.min())
         # p_feats = (p_feats - p_feats.min()) / (p_feats.max() - p_feats.min())
         # p_feats = torch.cat([p_feats, q], dim=1)
 
-        # p_pred = self.point_classifier(p_feats)
+        p_pred = self.point_classifier(p_feats)
         # print("123123123", p_feats.max(), p_feats.min())
-        p_feats = p_feats.permute(0, 2, 1)
-        p_pred = self.mlp(p_feats)
-        p_pred = p_pred.permute(0, 2, 1)
+        # p_feats = p_feats.permute(0, 2, 1)
+        # p_pred = self.mlp(p_feats)
+        # p_pred = p_pred.permute(0, 2, 1)
         q_pred = self.mlp_pos(q)
-        pred = (1 - self.combin_arg) * p_pred + q_pred * self.combine_arg
+        q_pred = q_pred.permute(0, 2, 1)
+        pred = (1 - self.combine_arg) * p_pred + q_pred * self.combine_arg
         return pred
