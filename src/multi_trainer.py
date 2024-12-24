@@ -101,15 +101,15 @@ class Trainer:
         self.optimizer = torch.optim.AdamW(grad_vars, lr=cfg["train"]["lrate"])
         # self.lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
         #     optimizer=self.optimizer, gamma=cfg["train"]["lrate_gamma"])
-        self.lr_scheduler = torch.optim.lr_scheduler.StepLR(
-            optimizer=self.optimizer,
-            step_size=cfg["train"]["lrate_step"],
-            gamma=cfg["train"]["lrate_gamma"],
-        )
-        # self.lr_func = one_cycle(1, cfg["train"]["lrf"], self.epochs)
-        # self.lr_scheduler = lr_scheduler.LambdaLR(
-        #    self.optimizer, lr_lambda=self.lr_func
+        # self.lr_scheduler = torch.optim.lr_scheduler.StepLR(
+        #    optimizer=self.optimizer,
+        #    step_size=cfg["train"]["lrate_step"],
+        #    gamma=cfg["train"]["lrate_gamma"],
         # )
+        self.lr_func = one_cycle(1, cfg["train"]["lrf"], self.epochs)
+        self.lr_scheduler = lr_scheduler.LambdaLR(
+            self.optimizer, lr_lambda=self.lr_func
+        )
 
         # Load checkpoints
         self.epoch_start = 0
@@ -171,7 +171,7 @@ class Trainer:
 
             # Evaluate
             self.idx_epoch = idx_epoch
-            # self.warmup()
+            self.warmup()
             if (
                 (idx_epoch % self.i_eval == 0 or idx_epoch == self.epochs)
                 and self.i_eval > 0

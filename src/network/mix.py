@@ -116,9 +116,9 @@ class DIF_Net(nn.Module):
         # self.point_classifier = SurfaceClassifier(
         #    [mid_ch + 32, 256, 64, 16, 1], no_residual=False
         # )
-        # self.point_classifier = SurfaceClassifier(
-        #    [mid_ch, 256, 64, 16, 1], no_residual=False
-        # )
+        self.point_classifier = SurfaceClassifier(
+            [mid_ch, 256, 64, 16, 1], no_residual=False
+        )
         print(f"DIF_Net, mid_ch: {mid_ch}, combine: {self.combine}")
 
     def forward(self, data, eval_npoint=10240):
@@ -177,8 +177,8 @@ class DIF_Net(nn.Module):
                 f_list.append(p_feats)
             p_feats = torch.cat(f_list, dim=1)
             p_list.append(p_feats)
-        # p_feats = torch.stack(p_list, dim=-1)  # B, C, N, M
-        p_feats = torch.cat(p_list, dim=1)  # B, C, N, M
+        p_feats = torch.stack(p_list, dim=-1)  # B, C, N, M
+        # p_feats = torch.cat(p_list, dim=1)  # B, C, N, M
 
         # 2. cross-view fusion
         if self.combine == "max":
@@ -206,5 +206,5 @@ class DIF_Net(nn.Module):
         # p_pred = p_pred.permute(0, 2, 1)
         q_pred = self.mlp_pos(q)
         q_pred = q_pred.permute(0, 2, 1)
-        pred = (1 - self.combine_arg) * p_pred + q_pred * self.combine_arg
-        return pred
+        # pred = (1 - self.combine_arg) * p_pred + q_pred * self.combine_arg
+        return p_pred, q_pred
