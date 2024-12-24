@@ -91,6 +91,7 @@ class BasicTrainer(Trainer):
             "psnr_3d": 0.0,
             "ssim_3d": 0.0,
         }
+        print("555555combine_arg", self.net.combine_arg)
         for index, data in enumerate(self.eval_dset):
             # stx()
             image_pred = self.net(data)

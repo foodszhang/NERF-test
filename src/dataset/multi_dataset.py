@@ -381,37 +381,12 @@ class MultiTIGREDataset(Dataset):
                 projections, dtype=torch.float32, device=self.device
             )
             projections = projections / projections.max()
-            tq = Q.reshape(-1, 3)
-            q_coords = self.geo.project(tq, self.angles[1])
-            q_coords = torch.tensor(q_coords, dtype=torch.float32, device=self.device)
-            # print("3123123123", q_coords, q_coords.shape)
-            q_coords = q_coords.reshape(256, 256, 2)
-            q_r = index_2d(projections[0], q_coords)
-            q_r = q_r.detach().cpu().numpy()
-            q_r = q_r.reshape(256, 256) * 256
-            rr = np.zeros((256, 256))
-            q_coords = (q_coords + 1) * 128
-            print("asdasdasd", q_coords)
-            for i in range(256):
-                for j in range(256):
-                    rr[int(q_coords[i][j][0])][int(q_coords[i][j][1])] = q_r[i, j]
-            q_r = q_r.astype(np.uint8)
-            t_r = projections[1].detach().cpu().numpy()
-            t_r = (t_r * 256).astype(np.uint8)
-            ski.io.imsave("test.png", rr)
-            ski.io.imsave("result.png", t_r)
-            import sys
-
-            sys.exit(0)
-
-            projections = projections / projections.max()
             pts = self.voxels.reshape(-1, 3)
-            points = self.sample_points(pts, image_prob)
-            # points = self.sample_points(pts)
+            # points = self.sample_points(pts, image_prob)
+            points = self.sample_points(pts)
             q = coord_to_dif_base(points)
             values = index_3d(image, points)
             cl = []
-
             for other_proj_num in range(self.n_views):
                 coords = self.geo.project(q, self.angles[other_proj_num])
                 coords = torch.tensor(coords, dtype=torch.float32, device=self.device)

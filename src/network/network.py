@@ -79,7 +79,7 @@ class DensityNetwork_debug(nn.Module):
         bound=0.2,
         num_layers=8,
         hidden_dim=512,
-        skips=[4],
+        skips=[2, 6],
         out_dim=1,
         last_activation="sigmoid",
     ):
