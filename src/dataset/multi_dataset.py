@@ -334,7 +334,7 @@ class MultiTIGREDataset(Dataset):
             p_gt = np.zeros(len(pts))
             p_gt = torch.tensor(p_gt, dtype=torch.float32, device=self.device)
             pts = torch.tensor(pts, dtype=torch.float32, device=self.device)
-            points = coord_to_sax(pts)
+            pts = coord_to_sax(pts)
             return {
                 "pts": pts,
                 "image": image,
