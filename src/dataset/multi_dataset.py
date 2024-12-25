@@ -383,20 +383,21 @@ class MultiTIGREDataset(Dataset):
             )
             projections = projections / projections.max()
             pts = self.voxels.reshape(-1, 3)
-            # points = self.sample_points(pts, image_prob)
-            b_idx = np.random.randint(len(self.blocks))
-            block_values = self.load_block(name, b_idx)
-            block_coords = self.blocks[b_idx]  # N, 3
-            points, p_gt = self.sample_points(block_coords, block_values)
-            # q = coord_to_dif_base(points)
-            q = points
-            # values = index_3d(image, points)
+            points = self.sample_points_pdf(pts)
+            # b_idx = np.random.randint(len(self.blocks))
+            # block_values = self.load_block(name, b_idx)
+            # block_coords = self.blocks[b_idx]  # N, 3
+            # points, p_gt = self.sample_points(block_coords, block_values)
+            q = coord_to_dif_base(points)
+            # q = points
+            values = index_3d(image, points)
             cl = []
             for other_proj_num in range(self.n_views):
                 coords = self.geo.project(q, self.angles[other_proj_num])
                 coords = torch.tensor(coords, dtype=torch.float32, device=self.device)
                 cl.append(coords)
             coords = torch.stack(cl, dim=0)
+            p_gt = values
             p_gt = torch.tensor(p_gt, dtype=torch.float32, device=self.device)
             points = torch.tensor(points, dtype=torch.float32, device=self.device)
             return {
@@ -440,16 +441,16 @@ class MultiTIGREDataset(Dataset):
             }
         return {}
 
-    # def sample_points(self, points, values=None):
-    #    if values is None:
-    #        choice = np.random.choice(len(points), size=self.npoint, replace=False)
-    #    else:
-    #        choice = np.random.choice(
-    #            len(points), size=self.npoint, replace=False, p=values
-    #        )
+    def sample_points_pdf(self, points, values=None):
+        if values is None:
+            choice = np.random.choice(len(points), size=self.npoint, replace=False)
+        else:
+            choice = np.random.choice(
+                len(points), size=self.npoint, replace=False, p=values
+            )
 
-    #    points = points[choice]
-    #    return points
+        points = points[choice]
+        return points
 
     def sample_points(self, points, values=None):
         choice = np.random.choice(len(points), size=self.npoint, replace=False)
