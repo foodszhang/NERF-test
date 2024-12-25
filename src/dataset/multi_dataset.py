@@ -145,7 +145,7 @@ class ConeGeometry(object):
         # d_points: [N, 2] ranging from [-1, 1]
 
         points = deepcopy(points)
-        points = points.cpu().detach().numpy()
+        # points = points.cpu().detach().numpy()
         points[:, :2] -= 0.5  # [-0.5, 0.5]
         points[:, 2] = 0.5 - points[:, 2]  # [-0.5, 0.5]
         points *= self.v_res * self.v_spacing  # mm
