@@ -402,9 +402,9 @@ class MultiTIGREDataset(Dataset):
             return {
                 # "rays": rays,
                 "pts": points,
-                "image": values,
+                "image": p_gt,
                 "projections": projections,
-                "proj_pts": p_gt,
+                "proj_pts": coords,
             }
 
         elif self.type == "val":
@@ -419,21 +419,20 @@ class MultiTIGREDataset(Dataset):
             )
             projections = projections / projections.max()
             pts = self.voxels.reshape(-1, 3)
-            # q = coord_to_dif_base(pts)
-            # values = index_3d(image, pts)
-            # cl = []
-            # for other_proj_num in range(self.n_views):
-            #    coords = self.geo.project(q, self.angles[other_proj_num])
-            #    coords = torch.tensor(coords, dtype=torch.float32, device=self.device)
-            #    cl.append(coords)
-            # coords = torch.stack(cl, dim=0)
+            q = coord_to_dif_base(pts)
+            values = index_3d(image, pts)
+            cl = []
+            for other_proj_num in range(self.n_views):
+                coords = self.geo.project(q, self.angles[other_proj_num])
+                coords = torch.tensor(coords, dtype=torch.float32, device=self.device)
+                cl.append(coords)
+            coords = torch.stack(cl, dim=0)
             p_gt = np.zeros(len(pts))
             return {
-                "projs": projections,
                 "pts": pts,
                 "image": image,
                 "projections": projections,
-                "proj_pts": p_gt,
+                "proj_pts": coords,
             }
         return {}
 
