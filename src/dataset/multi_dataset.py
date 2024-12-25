@@ -420,7 +420,8 @@ class MultiTIGREDataset(Dataset):
             projections = projections / projections.max()
             # pts = self.voxels.reshape(-1, 3)
             pts = self.points
-            q = coord_to_dif_base(pts)
+            # q = coord_to_dif_base(pts)
+            q = pts
             # values = index_3d(image, pts)
             cl = []
             for other_proj_num in range(self.n_views):
