@@ -126,11 +126,6 @@ def run_network(inputs, fn, netchunk):
     uvt_flat = torch.reshape(
         inputs, [-1, inputs.shape[-1]]
     )  # [N_rays, N_sample, 3] -> [N_rays * N_sample, 3]
-    # if uvt_flat.shape[0] > netchunk:
-    #     stx()
-    # stx()
-    # print('qqqqqq', index_3d(fn.pre_image, uvt_flat).shape)
-    # print('qqqqqq', index_3d(fn.pre_image, uvt_flat))
 
     out_flat = torch.cat(
         [fn(uvt_flat[i : i + netchunk]) for i in range(0, uvt_flat.shape[0], netchunk)],

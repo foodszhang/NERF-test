@@ -48,10 +48,8 @@ def main():
     outputName = args.outputName
     outputFolder = args.outputFolder
     # matPath = f"./dataGenerator/{dataFolder}/{dataType}/img.mat"
-    matPath = (
-        f"./data/1.3.6.1.4.1.14519.5.2.1.6279.6001.129055977637338639741695800950.mhd"
-    )
-    configPath = f"./dataGenerator/{dataFolder}/{dataType}/config_256.yml"
+    matPath = "/root/autodl-fs/subset0/1.3.6.1.4.1.14519.5.2.1.6279.6001.716498695101447665580610403574.mhd"
+    configPath = f"./config.yml"
     outputPath = osp.join(outputFolder, f"{outputName}.pickle")
     # multi_gen('./data/', configPath, dataFolder, outputPath, dataType, show=True)
     data = generator(matPath, configPath, dataFolder, dataType, 0, show=True)

@@ -91,7 +91,7 @@ class DIF_Net(nn.Module):
         num_views,
         combine,
         mid_ch=64,
-        image_encoding="unet",
+        image_encoding="unet3",
         position_encoding="hashgrid",
     ):
         super().__init__()
@@ -193,11 +193,11 @@ class DIF_Net(nn.Module):
 
         # 3. point-wise classification
         # p_feats B, 128 , N
-        # q = self.position_encoder(data["pts"], 0.2)  # B, N, 32
-        # q = q.permute(0, 2, 1)
-        ## q = (q - q.min()) / (q.max() - q.min())
-        ## p_feats = (p_feats - p_feats.min()) / (p_feats.max() - p_feats.min())
-        # p_feats = torch.cat([p_feats, q], dim=1)
+        q = self.position_encoder(data["pts"], 0.2)  # B, N, 32
+        q = q.permute(0, 2, 1)
+        # q = (q - q.min()) / (q.max() - q.min())
+        # p_feats = (p_feats - p_feats.min()) / (p_feats.max() - p_feats.min())
+        p_feats = torch.cat([p_feats, q], dim=1)
 
         # p_pred = self.point_classifier(p_feats)
         # print("123123123", p_feats.max(), p_feats.min())
