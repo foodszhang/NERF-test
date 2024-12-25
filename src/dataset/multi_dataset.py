@@ -46,6 +46,11 @@ def coord_to_sax_base(points):
     return points * 0.1275 - 0.1275
 
 
+def coord_to_sax(points):
+    # (0-1) -> (-0.1275, 0.1275)
+    return points * 0.1275 * 2 - 0.1275
+
+
 # TODO: HARD CODE
 def index_3d(image, uv, max_val=0.1275, min_val=-0.1275):
     # feat: [D, H, W]
@@ -260,114 +265,6 @@ class MultiTIGREDataset(Dataset):
             return len(self.cfg["eval"])
 
     def __getitem__(self, index):
-        # if self.type == "train":
-        #    # stx()
-        #    """
-        #    d['projs'] - [10, 256, 256]
-        #    """
-        #    name = self.cfg["train"][index]
-        #    image_path = self.cfg["image"].format(name)
-        #    image = read_nifti(image_path)
-        #    image = torch.tensor(image, dtype=torch.float32, device=self.device)
-        #    projection_path = self.cfg["projections"].format(name)
-        #    projections = pickle.load(open(projection_path, "rb"))
-        #    projections = torch.tensor(
-        #        projections, dtype=torch.float32, device=self.device
-        #    )
-        #    projections = projections
-        #    projs_list = []
-        #    rays_list = []
-        #    pts_list = []
-        #    image_pts_list = []
-        #    coords_list = []
-        #    for proj_num in range(self.n_views):
-        #        projs_valid = (projections[proj_num] > 0).flatten()
-        #        coords_valid = self.coords[
-        #            projs_valid
-        #        ]  # [65536, 2] -> [40653, 2], 将布尔值矩阵当做索引，可能是因为并不是所有的
-        #        select_inds = np.random.choice(
-        #            coords_valid.shape[0], size=[self.n_rays], replace=False
-        #        )  # 从 0 ~ 40653-1 中选取 1024 个值
-        #        select_coords = coords_valid[
-        #            select_inds
-        #        ].long()  # 根据选取的索引值来取坐标
-        #        rays = self.rays[
-        #            proj_num, select_coords[:, 0], select_coords[:, 1]
-        #        ]  # self.rays: [50, 256, 256, 6], index 决定了取哪一个角度或样例，后两项决定了横纵坐标
-        #        projs = projections[proj_num, select_coords[:, 0], select_coords[:, 1]]
-        #        pts, _, _, _ = get_pts(
-        #            rays,
-        #            self.n_samples,
-        #        )
-        #        pts = pts.reshape(-1, 3)
-        #        q = coord_to_dif_base(pts)
-        #        cl = []
-        #        for other_proj_num in range(self.n_views):
-        #            coords = self.geo.project(q, self.angles[other_proj_num])
-        #            # coords -> (-1, 1)
-        #            coords = torch.tensor(
-        #                coords, dtype=torch.float32, device=self.device
-        #            )
-        #            cl.append(coords)
-        #        coords = torch.stack(cl, dim=0)
-        #        #
-        #        image_pts = index_3d(image, pts)
-        #        projs_list.append(projs)
-        #        rays_list.append(rays)
-        #        pts_list.append(pts)
-        #        image_pts_list.append(image_pts)
-        #        coords_list.append(coords)
-
-        #    image_pts = torch.stack(image_pts_list, dim=0)
-        #    pts = torch.stack(pts_list, dim=0)
-        #    rays = torch.stack(rays_list, dim=0)
-        #    projs = torch.stack(projs_list, dim=0)
-        #    coords = torch.stack(coords_list, dim=0)
-        #    coords = coords.permute(1, 0, 2, 3)
-        #    coords = coords.reshape(self.n_views, -1, 2)
-
-        #    return {
-        #        "projs": projs,
-        #        "rays": rays,
-        #        "pts:": pts,
-        #        "image": image_pts,
-        #        "projections": projections,
-        #        "proj_pts": coords,
-        #    }
-
-        # elif self.type == "val":
-        #    name = self.cfg["eval"][index]
-        #    image_path = self.cfg["image"].format(name)
-        #    image = read_nifti(image_path)
-        #    image = torch.tensor(image, dtype=torch.float32, device=self.device)
-        #    projection_path = self.cfg["projections"].format(name)
-        #    projections = pickle.load(open(projection_path, "rb"))
-        #    projections = torch.tensor(
-        #        projections, dtype=torch.float32, device=self.device
-        #    )
-        #    projections = projections
-        #    projs_list = []
-        #    rays_list = []
-        #    pts_list = []
-        #    image_pts_list = []
-        #    coords_list = []
-        #    pts = self.voxels.reshape(-1, 3)
-        #    q = coord_to_dif_base(pts)
-        #    cl = []
-        #    for other_proj_num in range(self.n_views):
-        #        coords = self.geo.project(q, self.angles[other_proj_num])
-        #        coords = torch.tensor(coords, dtype=torch.float32, device=self.device)
-        #        cl.append(coords)
-        #    coords = torch.stack(cl, dim=0)
-        #    return {
-        #        "projs": projections,
-        #        "pts:": pts,
-        #        "image": image,
-        #        "projections": projections,
-        #        "proj_pts": coords,
-        #    }
-        # print("??????")
-        # return {}
         if self.type == "train":
             # stx()
             """
@@ -385,7 +282,7 @@ class MultiTIGREDataset(Dataset):
             projections = torch.tensor(
                 projections, dtype=torch.float32, device=self.device
             )
-            projections = projections / projections.max()
+            # projections = projections / projections.max()
             # pts = self.voxels.reshape(-1, 3)
             # points = self.sample_points_pdf(pts)
             b_idx = np.random.randint(len(self.blocks))
@@ -393,7 +290,7 @@ class MultiTIGREDataset(Dataset):
             block_coords = self.blocks[b_idx]  # N, 3
             points, p_gt = self.sample_points(block_coords, block_values)
             # q = coord_to_dif_base(points)
-            # q = points
+            q = points
             # values = index_3d(image, points)
             cl = []
             for other_proj_num in range(self.n_views):
@@ -403,6 +300,7 @@ class MultiTIGREDataset(Dataset):
             coords = torch.stack(cl, dim=0)
             p_gt = torch.tensor(p_gt, dtype=torch.float32, device=self.device)
             points = torch.tensor(points, dtype=torch.float32, device=self.device)
+            points = coord_to_sax(points)
             return {
                 # "rays": rays,
                 "pts": points,
@@ -421,7 +319,7 @@ class MultiTIGREDataset(Dataset):
             projections = torch.tensor(
                 projections, dtype=torch.float32, device=self.device
             )
-            projections = projections / projections.max()
+            # projections = projections / projections.max()
             # pts = self.voxels.reshape(-1, 3)
             pts = self.points
             # q = coord_to_dif_base(pts)
@@ -436,6 +334,7 @@ class MultiTIGREDataset(Dataset):
             p_gt = np.zeros(len(pts))
             p_gt = torch.tensor(p_gt, dtype=torch.float32, device=self.device)
             pts = torch.tensor(pts, dtype=torch.float32, device=self.device)
+            points = coord_to_sax(pts)
             return {
                 "pts": pts,
                 "image": image,
