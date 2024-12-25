@@ -105,9 +105,9 @@ class DIF_Net(nn.Module):
         self.position_encoder = get_encoder(position_encoding)
         # self.mlp = DensityNetwork_debug(mid_ch + 32)
         # self.mlp = DensityNetwork_debug(mid_ch)
-        # self.mlp = DensityNetwork_debug(mid_ch * num_views + 32)
-        self.mlp = DensityNetwork_debug(mid_ch * num_views)
-        self.mlp_pos = DensityNetwork_debug(32)
+        self.mlp = DensityNetwork_debug(mid_ch * num_views + 32)
+        # self.mlp = DensityNetwork_debug(mid_ch * num_views)
+        # self.mlp_pos = DensityNetwork_debug(32)
         self.combine_arg = torch.nn.Parameter(torch.tensor(0.0))
 
         if self.combine == "mlp":
@@ -193,11 +193,11 @@ class DIF_Net(nn.Module):
 
         # 3. point-wise classification
         # p_feats B, 128 , N
-        # q = self.position_encoder(data["pts"], 0.2)  # B, N, 32
-        # q = q.permute(0, 2, 1)
+        q = self.position_encoder(data["pts"], 0.2)  # B, N, 32
+        q = q.permute(0, 2, 1)
         # q = (q - q.min()) / (q.max() - q.min())
         # p_feats = (p_feats - p_feats.min()) / (p_feats.max() - p_feats.min())
-        # p_feats = torch.cat([p_feats, q], dim=1)
+        p_feats = torch.cat([p_feats, q], dim=1)
 
         # p_pred = self.point_classifier(p_feats)
         # print("123123123", p_feats.max(), p_feats.min())
