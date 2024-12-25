@@ -16,6 +16,8 @@ data["n_views"] = 10
 data["config.yaml"] = "./data/luna16/config.yml"
 data["image"] = "./data/luna16/image/{}.nii.gz"
 data["projections"] = "./data/luna16/projection/{}.pickle"
+data["image_block"] = "./data/luna16/blocks/{}/block_{}.npy"
+data["blocks"] = "./data/luna16/blocks/blocks.npy"
 
 
 print(json.dumps(data, indent=4))

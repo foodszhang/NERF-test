@@ -216,6 +216,7 @@ class MultiTIGREDataset(Dataset):
         self.points = torch.tensor(self.points, dtype=torch.float32, device=device)
         self.npoint = 30000
         self.angles = np.linspace(0, 180 / 180 * np.pi, self.n_views + 1)[:-1]
+        self.blocks = np.load(self.cfg["blocks"])
         rays = self.get_rays(
             self.angles, self.geo, device
         )  # [50, 256, 256, 6] 在每一个角度下获取射线的原点和方向
@@ -383,7 +384,10 @@ class MultiTIGREDataset(Dataset):
             projections = projections / projections.max()
             pts = self.voxels.reshape(-1, 3)
             # points = self.sample_points(pts, image_prob)
-            points = self.sample_points(pts)
+            b_idx = np.random.randint(len(self.blocks))
+            block_values = self.load_block(name, b_idx)
+            block_coords = self.blocks[b_idx]  # N, 3
+            points, p_gt = self.sample_points(block_coords, block_values)
             q = coord_to_dif_base(points)
             values = index_3d(image, points)
             cl = []
@@ -430,16 +434,30 @@ class MultiTIGREDataset(Dataset):
             }
         return {}
 
-    def sample_points(self, points, values=None):
-        if values is None:
-            choice = np.random.choice(len(points), size=self.npoint, replace=False)
-        else:
-            choice = np.random.choice(
-                len(points), size=self.npoint, replace=False, p=values
-            )
+    # def sample_points(self, points, values=None):
+    #    if values is None:
+    #        choice = np.random.choice(len(points), size=self.npoint, replace=False)
+    #    else:
+    #        choice = np.random.choice(
+    #            len(points), size=self.npoint, replace=False, p=values
+    #        )
 
+    #    points = points[choice]
+    #    return points
+
+    def sample_points(self, points, values=None):
+        choice = np.random.choice(len(points), size=self.npoint, replace=False)
         points = points[choice]
-        return points
+        if values is not None:
+            values = values[choice]
+            values = values.astype(float) / 255.0
+            return points, values
+        else:
+            return points
+
+    def load_block(self, name, b_idx):
+        path = self.cfg["image_block"].format(name, b_idx)
+        return np.load(path)
 
     # 此处的 geo: ConeGeometry 表示什么？圆锥形几何
     # 冒号是类型建议符，告诉程序员希望传入的实参的类型

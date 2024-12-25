@@ -18,6 +18,21 @@ import cv2
 import argparse
 import imageio.v2 as iio
 import json
+from glob import glob
+from tqdm import tqdm
+
+
+def generate_blocks():
+    block_list = []
+    base = np.mgrid[:64, :64, :64] * 4  # 3, 64 ^ 3
+    base = base.reshape(3, -1)
+    for x in range(4):
+        for y in range(4):
+            for z in range(4):
+                offset = np.array([x, y, z])
+                block = base + offset[:, None]
+                block_list.append(block)
+    return block_list
 
 
 def read_nifti(path):
@@ -40,6 +55,25 @@ def main():
     all_names = info["train"] + info["eval"] + info["test"]
     for name in all_names:
         generator(name, data_dir, configPath, "luna16", show=False)
+    os.makedirs(f"{data_dir}/luna16/blocks/", exist_ok=True)
+
+    block_list = generate_blocks()
+    blocks = np.stack(block_list, axis=0)  # K, 3, N^3
+    blocks = blocks.transpose(0, 2, 1).astype(float) / 255  # K, N^3, 3
+    np.save(f"{data_dir}/luna16/blocks/blocks.npy", blocks)
+
+    files = glob(f"{data_dir}/luna16/processed/*.nii.gz")
+    for file in tqdm(files, ncols=50):
+        name = ".".join(file.split("/")[-1].split(".")[:-2])
+        data_path = f"{data_dir}/luna16/processed/{name}.nii.gz"
+        image = read_nifti(data_path)
+
+        save_dir = f"{data_dir}/luna16/blocks/{name}/"
+        os.makedirs(save_dir, exist_ok=True)
+        for k, block in enumerate(block_list):
+            block = block.reshape(3, -1).transpose(1, 0)
+            image_block = image[block[:, 0], block[:, 1], block[:, 2]]
+            np.save(os.path.join(save_dir, f"block_{k}.npy"), image_block)
 
 
 # %% Geometry
@@ -254,20 +288,6 @@ def generator(name, data_dir, configPath, result_dir, show=False):
                 ),
             )
     return data
-
-
-def multi_gen(dir_path, configPath, dataFolder, outputFolder, dataType, show=False):
-    index = 0
-    for file in os.listdir(dir_path):
-        if file.endswith("mhd"):
-            matPath = os.path.join(dir_path, file)
-            data = generator(matPath, configPath, dataFolder, dataType, index, show)
-            index += 1
-            outputDir = osp.join(outputFolder, f"{dataType}_{index}")
-            os.makedirs(outputDir, exist_ok=True)
-            outputPath = osp.join(outputDir, f"data.pickle")
-            with open(outputPath, "wb") as handle:
-                pickle.dump(data, handle, pickle.HIGHEST_PROTOCOL)
 
 
 if __name__ == "__main__":
