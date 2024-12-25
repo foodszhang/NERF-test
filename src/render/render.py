@@ -57,9 +57,8 @@ def get_pts(rays, n_samples, perturb=None):
     return pts, z_vals, rays_o, rays_d
 
 
-def render_dif(rays, raw, n_samples):
-    pts, z_vals, rays_o, rays_d = get_pts(rays, n_samples, None)
-    raw = raw.reshape(pts.shape[0], pts.shape[1], 1)
+def render_dif(pts, proj_pts, net, dif_net, n_samples):
+    raw = run_network_with_dif(pts, proj_pt, net, dif_net)  # run_network 输出衰减系数μ
     acc, weights = raw2outputs(raw, z_vals, rays_d)  # acc 和 weights 各自的含义是？
     ret = {"acc": acc, "pts": pts, "raw": raw, "weights": weights}
     for k in ret:
@@ -126,6 +125,41 @@ def run_network(inputs, fn, netchunk):
     uvt_flat = torch.reshape(
         inputs, [-1, inputs.shape[-1]]
     )  # [N_rays, N_sample, 3] -> [N_rays * N_sample, 3]
+
+    out_flat = torch.cat(
+        [fn(uvt_flat[i : i + netchunk]) for i in range(0, uvt_flat.shape[0], netchunk)],
+        0,
+    )
+    out = out_flat.reshape(
+        list(inputs.shape[:-1]) + [out_flat.shape[-1]]
+    )  # 还原成 input 的 shape
+    return out
+
+
+def run_network_with_dif(pts, net, dif_net, netchunk):
+    """
+    Prepares inputs and applies network "fn".
+    inputs: [N_rays, N_sample, 3] - [1024, 192, 3]  训练的时候
+    uvt_flat: [N_rays * N_sample, 3]
+    netchunk: 是409600, 网络每次可以跑 409600 个点
+    所以 NeRF 模型的输入样例应该是 [1024x192, 3]
+
+    测试的时候, input sample 是 (128, 128, 128, 3)
+    out: [1024, 192, 1]
+    """
+    total_npoint = pts.shape[1]
+    n_batch = int(np.ceil(total_npoint / netchunk))
+    for i in range(n_batch):
+        left = i * eval_npoint
+        right = min((i + 1) * netchunk, total_npoint)
+        dif_net(
+            {
+                "pts": pts[..., left:right, :],
+                "projections": projections,
+                "proj_pts": proj_pts[..., left:right, :],
+            }
+        )
+        net(pts[..., left:right, :])
 
     out_flat = torch.cat(
         [fn(uvt_flat[i : i + netchunk]) for i in range(0, uvt_flat.shape[0], netchunk)],

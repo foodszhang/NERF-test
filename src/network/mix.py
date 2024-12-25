@@ -105,8 +105,8 @@ class DIF_Net(nn.Module):
         self.position_encoder = get_encoder(position_encoding)
         # self.mlp = DensityNetwork_debug(mid_ch + 32)
         # self.mlp = DensityNetwork_debug(mid_ch)
-        # self.mlp = DensityNetwork_debug(mid_ch * num_views + 32)
-        self.mlp = DensityNetwork_debug(mid_ch * num_views)
+        self.mlp = DensityNetwork_debug(mid_ch * num_views + 32)
+        # self.mlp = DensityNetwork_debug(mid_ch * num_views)
         # self.mlp_pos = DensityNetwork_debug(32)
         self.combine_arg = torch.nn.Parameter(torch.tensor(0.0))
 

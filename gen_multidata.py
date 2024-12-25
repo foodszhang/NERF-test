@@ -48,27 +48,28 @@ def save_nifti(image, path):
 
 def main():
     # matPath = f"./dataGenerator/{dataFolder}/{dataType}/img.mat"
-    data_dir = "./data/"
+    data_dir = "/root/autodl-fs/subset0"
     configPath = f"./config.yml"
-    infoPath = osp.join(data_dir, "info.json")
+    out_dir = "./data/luna16"
+    infoPath = osp.join(out_dir, "info.json")
     info = json.load(open(infoPath, "r"))
     all_names = info["train"] + info["eval"] + info["test"]
     for name in all_names:
-        generator(name, data_dir, configPath, "luna16", show=False)
-    os.makedirs(f"{data_dir}/luna16/blocks/", exist_ok=True)
+        generator(name, data_dir, configPath, out_dir, show=False)
+    os.makedirs(f"{out_dir}/blocks/", exist_ok=True)
 
     block_list = generate_blocks()
     blocks = np.stack(block_list, axis=0)  # K, 3, N^3
     blocks = blocks.transpose(0, 2, 1).astype(float) / 255  # K, N^3, 3
-    np.save(f"{data_dir}/luna16/blocks/blocks.npy", blocks)
+    np.save(f"{out_dir}/blocks/blocks.npy", blocks)
 
-    files = glob(f"{data_dir}/luna16/image/*.nii.gz")
+    files = glob(f"{out_dir}/image/*.nii.gz")
     for file in tqdm(files, ncols=50):
         name = ".".join(file.split("/")[-1].split(".")[:-2])
-        data_path = f"{data_dir}/luna16/image/{name}.nii.gz"
+        data_path = f"{out_dir}/image/{name}.nii.gz"
         image = read_nifti(data_path)
 
-        save_dir = f"{data_dir}/luna16/blocks/{name}/"
+        save_dir = f"{out_dir}/blocks/{name}/"
         os.makedirs(save_dir, exist_ok=True)
         for k, block in enumerate(block_list):
             block = block.reshape(3, -1).transpose(1, 0)
@@ -231,8 +232,8 @@ def generator(name, data_dir, configPath, result_dir, show=False):
     )
     img = np.clip(img, window[0], window[1])
     img = (img - window[0]) / (window[1] - window[0])
-    image_result_dir = osp.join(data_dir, result_dir, "image")
-    projection_result_dir = osp.join(data_dir, result_dir, "projection")
+    image_result_dir = osp.join(result_dir, "image")
+    projection_result_dir = osp.join(result_dir, "projection")
     os.makedirs(image_result_dir, exist_ok=True)
     os.makedirs(projection_result_dir, exist_ok=True)
     img = np.transpose(img, (2, 1, 0))
@@ -247,14 +248,9 @@ def generator(name, data_dir, configPath, result_dir, show=False):
     ]
     with open(osp.join(projection_result_dir, f"{name}.pickle"), "wb") as handle:
         pickle.dump(projections, handle, pickle.HIGHEST_PROTOCOL)
-    if show or True:
-        save_dir_train_ct = osp.join("dataGenerator/", result_dir, "show_vis_train_ct/")
-        save_dir_train_proj = osp.join(
-            "dataGenerator/", result_dir, "show_vis_train_proj/"
-        )
-        save_dir_vali_proj = osp.join(
-            "dataGenerator/", result_dir, "show_vis_vali_proj/"
-        )
+    if show:
+        save_dir_train_ct = osp.join(result_dir, "show_vis_train_ct/")
+        save_dir_train_proj = osp.join(result_dir, "show_vis_train_proj/") save_dir_vali_proj = osp.join(result_dir, "show_vis_vali_proj/")
 
         os.makedirs(save_dir_train_ct, exist_ok=True)
         os.makedirs(save_dir_train_proj, exist_ok=True)
