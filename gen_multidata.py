@@ -62,10 +62,10 @@ def main():
     blocks = blocks.transpose(0, 2, 1).astype(float) / 255  # K, N^3, 3
     np.save(f"{data_dir}/luna16/blocks/blocks.npy", blocks)
 
-    files = glob(f"{data_dir}/luna16/processed/*.nii.gz")
+    files = glob(f"{data_dir}/luna16/image/*.nii.gz")
     for file in tqdm(files, ncols=50):
         name = ".".join(file.split("/")[-1].split(".")[:-2])
-        data_path = f"{data_dir}/luna16/processed/{name}.nii.gz"
+        data_path = f"{data_dir}/luna16/image/{name}.nii.gz"
         image = read_nifti(data_path)
 
         save_dir = f"{data_dir}/luna16/blocks/{name}/"

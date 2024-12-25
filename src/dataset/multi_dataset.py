@@ -388,8 +388,10 @@ class MultiTIGREDataset(Dataset):
             block_values = self.load_block(name, b_idx)
             block_coords = self.blocks[b_idx]  # N, 3
             points, p_gt = self.sample_points(block_coords, block_values)
-            q = coord_to_dif_base(points)
-            values = index_3d(image, points)
+            # q = coord_to_dif_base(points)
+            q = points
+            print("qqq123123123", q.shape, p_gt.shape)
+            # values = index_3d(image, points)
             cl = []
             for other_proj_num in range(self.n_views):
                 coords = self.geo.project(q, self.angles[other_proj_num])
@@ -402,7 +404,7 @@ class MultiTIGREDataset(Dataset):
                 "pts": points,
                 "image": values,
                 "projections": projections,
-                "proj_pts": coords,
+                "proj_pts": p_gt,
             }
 
         elif self.type == "val":
@@ -417,20 +419,21 @@ class MultiTIGREDataset(Dataset):
             )
             projections = projections / projections.max()
             pts = self.voxels.reshape(-1, 3)
-            q = coord_to_dif_base(pts)
-            values = index_3d(image, pts)
-            cl = []
-            for other_proj_num in range(self.n_views):
-                coords = self.geo.project(q, self.angles[other_proj_num])
-                coords = torch.tensor(coords, dtype=torch.float32, device=self.device)
-                cl.append(coords)
-            coords = torch.stack(cl, dim=0)
+            # q = coord_to_dif_base(pts)
+            # values = index_3d(image, pts)
+            # cl = []
+            # for other_proj_num in range(self.n_views):
+            #    coords = self.geo.project(q, self.angles[other_proj_num])
+            #    coords = torch.tensor(coords, dtype=torch.float32, device=self.device)
+            #    cl.append(coords)
+            # coords = torch.stack(cl, dim=0)
+            p_gt = np.zeros(len(pts))
             return {
                 "projs": projections,
                 "pts": pts,
-                "image": values,
+                "image": image,
                 "projections": projections,
-                "proj_pts": coords,
+                "proj_pts": p_gt,
             }
         return {}
 
