@@ -456,7 +456,7 @@ class MultiTIGREDataset(Dataset):
         points = points[choice]
         if values is not None:
             values = values[choice]
-            values = values.astype(float) / 255.0
+            values = values.astype(float)
             return points, values
         else:
             return points
