@@ -154,6 +154,10 @@ class NerfDataset(Dataset):
         )
         self.angles = np.linspace(0, 180 / 180 * np.pi, self.n_views + 1)[:-1]
         # self.points = torch.tensor(self.points, dtype=torch.float32, device=device)
+        points = np.mgrid[:256, :256, :256]
+        points = points.astype(float) / (256 - 1)
+        points = points.reshape(3, -1)
+        self.points = points.transpose(1, 0)  # N, 3
         self.npoint = 30000
         rays = self.get_rays(
             self.angles, self.geo, device
