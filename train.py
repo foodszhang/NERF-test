@@ -108,7 +108,7 @@ class BasicTrainer(Trainer):
             cl.append(coords)
         coords = torch.stack(cl, dim=0)
         pts = pts.reshape(1, *pts.shape)
-        coords = coords.reshape(1, *pts.shape)
+        coords = coords.reshape(1, *coords.shape)
         projs = self.eval_dset.projs.reshape(-1, *self.eval_dset.projs.shape)
         raw = run_network_with_dif(
             pts,
