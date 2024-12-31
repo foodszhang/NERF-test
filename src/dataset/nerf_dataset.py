@@ -219,10 +219,7 @@ class NerfDataset(Dataset):
         self.voxels = torch.tensor(
             self.get_voxels(self.geo), dtype=torch.float32, device=device
         )
-        points = np.mgrid[:256, :256, :256]
-        points = points.astype(float) / (256 - 1)
-        points = points.reshape(3, -1)
-        self.points = points.transpose(1, 0)  # N, 3
+        self.angles = np.linspace(0, 180 / 180 * np.pi, self.n_views + 1)[:-1]
         # self.points = torch.tensor(self.points, dtype=torch.float32, device=device)
         self.npoint = 30000
         rays = self.get_rays(
@@ -297,27 +294,26 @@ class NerfDataset(Dataset):
                 index, select_coords[:, 0], select_coords[:, 1]
             ]  # self.rays: [50, 256, 256, 6], index 决定了取哪一个角度或样例，后两项决定了横纵坐标
             projs = self.projs[index, select_coords[:, 0], select_coords[:, 1]]  #
-            pts, _, _, _ = get_pts(
-                rays,
-                self.n_samples,
-            )
-            pts = pts.reshape(-1, 3)
-            q = coord_to_dif_base(pts)
-            cl = []
-            for other_proj_num in range(self.n_views):
-                coords = self.geo.project(q, self.angles[other_proj_num])
-                # coords -> (-1, 1)
-                coords = torch.tensor(coords, dtype=torch.float32, device=self.device)
-                cl.append(coords)
-            coords = torch.stack(cl, dim=0)
+            # pts, _, _, _ = get_pts(
+            #    rays,
+            #    self.n_samples,
+            # )
+            # pts = pts.reshape(-1, 3)
+            # q = coord_to_dif_base(pts)
+            # cl = []
+            # for other_proj_num in range(self.n_views):
+            #    coords = self.geo.project(q, self.angles[other_proj_num])
+            #    # coords -> (-1, 1)
+            #    coords = torch.tensor(coords, dtype=torch.float32, device=self.device)
+            #    cl.append(coords)
+            # coords = torch.stack(cl, dim=0)
             out = {
-                "projs": projs,
+                "projs": self.projs,
                 "rays": rays,
-                "pts": pts,
-                "proj_pts": coords,
             }
             return out
         elif self.type == "val":
+            raise Exception("Not implemented")
             rays = self.rays[index]
             projs = self.projs[index]
             pts = self.voxels.reshape(-1, 3)
@@ -333,13 +329,8 @@ class NerfDataset(Dataset):
             out = {
                 "projs": projs,
                 "rays": rays,
-                "pts": pts,
                 "proj_pts": coords,
-            }
-            return out
-            out = {
-                "projs": projs,
-                "rays": rays,
+                "image": self.image,
             }
             return out
         return {}

@@ -77,6 +77,7 @@ class Trainer:
         # print('434234234qqqq', self.eval_dset.voxels.max(), self.eval_dset.voxels.min(). self.eval_dset.voxels.shape)
 
         self.voxels = self.eval_dset.voxels if self.i_eval > 0 else None
+        self.train_dset = train_dset
 
         # Network，实例化网络
         network = get_network(cfg["network"]["net_type"])

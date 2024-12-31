@@ -91,7 +91,6 @@ class BasicTrainer(Trainer):
             "psnr_3d": 0.0,
             "ssim_3d": 0.0,
         }
-        print("555555combine_arg", self.net.combine_arg)
         for index, data in enumerate(self.eval_dset):
             # stx()
             image_pred = self.net(data)
@@ -188,7 +187,6 @@ class BasicTrainer(Trainer):
                 for key, value in loss.items():
                     f.write("%s: %f\n" % (key, value))
 
-        loss["ssim_3d_avg"] = loss["ssim_3d"] / len(self.eval_dset)
         if loss["ssim_3d"] > self.best_ssim_3d:
             torch.save(
                 {

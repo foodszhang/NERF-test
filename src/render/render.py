@@ -3,6 +3,7 @@ import torch.nn as nn
 from pdb import set_trace as stx
 from tqdm import tqdm
 import numpy as np
+from src.dataset.multi_dataset import coord_to_dif_base
 
 
 def coord_to_dif(points):
@@ -57,8 +58,24 @@ def get_pts(rays, n_samples, perturb=None):
     return pts, z_vals, rays_o, rays_d
 
 
-def render_dif(pts, proj_pts, net, dif_net, n_samples):
-    raw = run_network_with_dif(pts, proj_pt, net, dif_net)  # run_network 输出衰减系数μ
+def render_dif(rays, projs, net, dif_net, dataset, n_samples):
+    pts, z_vals, rays_o, rays_d = get_pts(rays, n_samples, True)
+    q = coord_to_dif_base(pts)
+    cl = []
+    for other_proj_num in range(dataset.n_views):
+        coords = dataset.geo.project(q, dataset.angles[other_proj_num])
+        # coords -> (-1, 1)
+        coords = torch.tensor(coords, dtype=torch.float32, device=dataset.device)
+        cl.append(coords)
+    coords = torch.stack(cl, dim=0)
+    proj_pt = coords
+    raw = run_network_with_dif(
+        pts,
+        projs,
+        proj_pt,
+        net,
+        dif_net,
+    )  # run_network 输出衰减系数μ
     acc, weights = raw2outputs(raw, z_vals, rays_d)  # acc 和 weights 各自的含义是？
     ret = {"acc": acc, "pts": pts, "raw": raw, "weights": weights}
     for k in ret:
@@ -136,7 +153,7 @@ def run_network(inputs, fn, netchunk):
     return out
 
 
-def run_network_with_dif(pts, net, dif_net, netchunk):
+def run_network_with_dif(pts, projs, proj_pts, nerf_net, dif_net, netchunk=10000):
     """
     Prepares inputs and applies network "fn".
     inputs: [N_rays, N_sample, 3] - [1024, 192, 3]  训练的时候
@@ -149,26 +166,27 @@ def run_network_with_dif(pts, net, dif_net, netchunk):
     """
     total_npoint = pts.shape[1]
     n_batch = int(np.ceil(total_npoint / netchunk))
+    dif_list = []
+    nerf_list = []
     for i in range(n_batch):
-        left = i * eval_npoint
+        left = i * netchunk
         right = min((i + 1) * netchunk, total_npoint)
-        dif_net(
+        dif_out = dif_net(
             {
                 "pts": pts[..., left:right, :],
-                "projections": projections,
+                "projections": projs,
                 "proj_pts": proj_pts[..., left:right, :],
             }
         )
-        net(pts[..., left:right, :])
+        nerf_net_out = nerf_net(pts[..., left:right, :])
+        dif_list.append(dif_out)
+        nerf_list.append(nerf_net_out)
 
-    out_flat = torch.cat(
-        [fn(uvt_flat[i : i + netchunk]) for i in range(0, uvt_flat.shape[0], netchunk)],
-        0,
-    )
-    out = out_flat.reshape(
-        list(inputs.shape[:-1]) + [out_flat.shape[-1]]
-    )  # 还原成 input 的 shape
-    return out
+    nerf_out = torch.cat(nerf_list, dim=2)
+
+    dif_out = torch.cat(dif_list, dim=2)
+
+    return nerf_out + dif_out
 
 
 def raw2outputs(raw, z_vals, rays_d, raw_noise_std=0.0):

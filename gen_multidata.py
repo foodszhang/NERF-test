@@ -250,7 +250,8 @@ def generator(name, data_dir, configPath, result_dir, show=False):
         pickle.dump(projections, handle, pickle.HIGHEST_PROTOCOL)
     if show:
         save_dir_train_ct = osp.join(result_dir, "show_vis_train_ct/")
-        save_dir_train_proj = osp.join(result_dir, "show_vis_train_proj/") save_dir_vali_proj = osp.join(result_dir, "show_vis_vali_proj/")
+        save_dir_train_proj = osp.join(result_dir, "show_vis_train_proj/")
+        save_dir_vali_proj = osp.join(result_dir, "show_vis_vali_proj/")
 
         os.makedirs(save_dir_train_ct, exist_ok=True)
         os.makedirs(save_dir_train_proj, exist_ok=True)

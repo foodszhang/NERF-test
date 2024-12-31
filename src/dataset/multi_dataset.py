@@ -270,8 +270,6 @@ class MultiTIGREDataset(Dataset):
             """
             d['projs'] - [10, 256, 256]
             """
-            name = self.cfg["train"][index]
-            image_path = self.cfg["image"].format(name)
             image = read_nifti(image_path)
             image_prob = image.reshape(-1)
             image_prob = image_prob + 0.5
