@@ -157,7 +157,7 @@ def run_network_with_dif(pts, projs, proj_pts, nerf_net, dif_net, netchunk=40960
             }
         )
         nerf_net_out = nerf_net(pts[..., left:right, :])
-        nerf_net_out = nerf_net_out.transpose(0, 2, 1)
+        nerf_net_out = nerf_net_out.permute((0, 2, 1))
         dif_list.append(dif_out)
         nerf_list.append(nerf_net_out)
 

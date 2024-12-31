@@ -94,6 +94,12 @@ class BasicTrainer(Trainer):
         # projs_pred = torch.cat(projs_pred, 0).reshape(N, H, W)
 
         # Evaluate density      渲染3D图像
+        loss = {
+            # "proj_psnr": 0.0,
+            # "proj_ssim": get_ssim(projs_pred, projs),
+            "psnr_3d": 0.0,
+            "ssim_3d": 0.0,
+        }
         pts = self.eval_dset.voxels.reshape(-1, 3)
         q = coord_to_dif_base(pts)
         cl = []
