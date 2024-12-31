@@ -74,6 +74,8 @@ class ConeGeometry(object):
     def project(self, points, angle):
         # points: [N, 3] ranging from [0, 1]
         # d_points: [N, 2] ranging from [-1, 1]
+        if isinstance(points, torch.Tensor):
+            points = points.cpu().detach().numpy()
 
         points = deepcopy(points)
         # points = points.cpu().detach().numpy()
