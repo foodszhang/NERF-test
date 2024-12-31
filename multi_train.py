@@ -28,7 +28,7 @@ print("!!!!!!", torch.cuda.is_available)
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
 
 from src.config.configloading import load_config
-from src.render import render_dif, run_network, get_pts, run_network_with_dif
+from src.render import render_dif, run_network, get_pts
 from src.multi_trainer import Trainer
 from src.loss import calc_mse_loss
 from src.utils import get_psnr, get_ssim, get_psnr_3d, get_ssim_3d, cast_to_image
