@@ -7,7 +7,7 @@ from tqdm import tqdm, trange
 from shutil import copyfile
 import numpy as np
 
-from .dataset import TIGREDataset as Dataset
+from .dataset import NerfDataset as Dataset
 
 from .utils import gen_log, time2file_name
 import datetime
@@ -71,14 +71,25 @@ class Trainer:
             else None
         )
         # stx()
-        self.train_dloader = torch.utils.data.DataLoader(
-            train_dset, batch_size=cfg["train"]["n_batch"]
-        )  # 官方的 data_loader 的作用知识分一个batch
-        # print('434234234qqqq', self.eval_dset.voxels.max(), self.eval_dset.voxels.min(). self.eval_dset.voxels.shape)
-
-        self.voxels = self.eval_dset.voxels if self.i_eval > 0 else None
-        self.train_dset = train_dset
-
+        train_dataset = Dataset(
+            cfg["exp"]["train_datadir"],
+            cfg["train"]["n_rays"],
+            cfg["train"]["n_samples"],
+            "train",
+            device,
+        )  # 由dataset去构造数据集
+        val_dataset = Dataset(
+            cfg["exp"]["eval_datadir"],
+            cfg["train"]["n_rays"],
+            cfg["train"]["n_samples"],
+            "val",
+            device,
+        )  # 由val
+        # stx()
+        self.train_dloader = DataLoader(
+            train_dataset, batch_size=1, shuffle=True, num_workers=0
+        )
+        self.eval_dset = val_dataset
         # Network，实例化网络
         network = get_network(cfg["network"]["net_type"])
         cfg["network"].pop("net_type", None)
