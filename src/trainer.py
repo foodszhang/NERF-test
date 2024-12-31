@@ -19,6 +19,14 @@ from pdb import set_trace as stx
 import SimpleITK as sitk
 
 
+def fmt_loss_str_eval(losses):
+    return "".join(", " + k + ": " + f"{losses[k]:.4g}" for k in losses)
+
+
+def fmt_loss_str(losses):
+    return "".join(", " + k + ": " + f"{losses[k].item():.4g}" for k in losses)
+
+
 class Trainer:
     def __init__(self, cfg, device="cuda"):
 
@@ -165,9 +173,6 @@ class Trainer:
         """
         self.logger.info(self.conf)
 
-        def fmt_loss_str(losses):
-            return "".join(", " + k + ": " + f"{losses[k].item():.4g}" for k in losses)
-
         iter_per_epoch = len(self.train_dloader)
         pbar = tqdm(total=iter_per_epoch * self.epochs, leave=True)  # processing bar
         if self.epoch_start > 0:
@@ -186,10 +191,10 @@ class Trainer:
                     )
                 self.net.train()
                 tqdm.write(
-                    f"[EVAL] epoch: {idx_epoch}/{self.epochs}{fmt_loss_str(loss_test)}"
+                    f"[EVAL] epoch: {idx_epoch}/{self.epochs}{fmt_loss_str_eval(loss_test)}"
                 )  # 此处为何不报PSNR？
                 self.logger.info(
-                    f"[EVAL] epoch: {idx_epoch}/{self.epochs}{fmt_loss_str(loss_test)}"
+                    f"[EVAL] epoch: {idx_epoch}/{self.epochs}{fmt_loss_str_eval(loss_test)}"
                 )
 
             # Train

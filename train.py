@@ -187,7 +187,7 @@ class BasicTrainer(Trainer):
             for key, value in loss.items():
                 f.write("%s: %f\n" % (key, value))
 
-        loss["ssim_3d_avg"] = loss["ssim_3d"] / len(self.eval_dset)
+        # loss["ssim_3d_avg"] = loss["ssim_3d"] / len(self.eval_dset)
         if loss["ssim_3d"] > self.best_ssim_3d:
             torch.save(
                 {
