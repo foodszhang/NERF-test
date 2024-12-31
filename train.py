@@ -6,7 +6,7 @@ import numpy as np
 from tqdm import tqdm
 import argparse
 import skimage as ski
-from src.utils import coord_to_dif_base, save_nifti
+from src.utils import coord_to_dif_base, save_nifti, coord_to_sax
 
 
 def config_parser():
@@ -100,8 +100,10 @@ class BasicTrainer(Trainer):
             "psnr_3d": 0.0,
             "ssim_3d": 0.0,
         }
-        pts = self.eval_dset.voxels.reshape(-1, 3)
-        q = coord_to_dif_base(pts)
+        # pts = self.eval_dset.voxels.reshape(-1, 3)
+        # q = coord_to_dif_base(pts)
+        pts = self.eval_dset.points
+        q = pts
         cl = []
         for other_proj_num in range(self.eval_dset.n_views):
             coords = self.eval_dset.geo.project(
@@ -116,6 +118,7 @@ class BasicTrainer(Trainer):
         pts = pts.reshape(1, *pts.shape)
         coords = coords.reshape(1, *coords.shape)
         projs = self.eval_dset.projs.reshape(-1, *self.eval_dset.projs.shape)
+        pts = coord_to_sax(pts)
         raw = run_network_with_dif(
             pts,
             projs,
