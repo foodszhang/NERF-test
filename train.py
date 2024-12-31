@@ -30,7 +30,7 @@ print("!!!!!!", torch.cuda.is_available())
 # os.environ["CUDA_HOME"]='C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.3'
 
 from src.config.configloading import load_config
-from src.render import render, run_network, render_dif
+from src.render import render, run_network, render_dif,
 from src.trainer import Trainer
 from src.loss import calc_mse_loss, calc_tv_loss, compute_tv_norm
 from src.utils import get_psnr, get_ssim, get_psnr_3d, get_ssim_3d, cast_to_image
@@ -82,28 +82,6 @@ class BasicTrainer(Trainer):
 
         return loss["loss"]
 
-    def sample_points(self, points):
-        choice = np.random.choice(len(points), size=50000, replace=False)
-        points = points[choice]
-        return points
-
-    # def compute_loss(self, data, global_step, idx_epoch):
-    #    points = self.eval_dset.voxels.reshape(-1, 3)
-    #    points = self.sample_points(points)
-
-    #    image_pred = run_network(
-    #        points, self.net_fine if self.net_fine is not None else self.net, self.netchunk)
-    #    #image_pred = image_pred.squeeze()
-    #    image = index_3d(self.net.pre_image, points)
-    #    loss = {"loss": 0.}
-    #    calc_mse_loss(loss, image_pred, image)
-    #    for ls in loss.keys():
-    #        self.writer.add_scalar(f"train/{ls}", loss[ls].item(), global_step)
-
-    #    return loss["loss"]
-
-    #    # stx()
-
     def eval_step(self, global_step, idx_epoch):
         """
         Evaluation step
@@ -129,7 +107,7 @@ class BasicTrainer(Trainer):
             )
             cl.append(coords)
         coords = torch.stack(cl, dim=0)
-        raw = render.run_network_with_dif(
+        raw = run_network_with_dif(
             pts,
             self.eval_dset.projs,
             coords,
