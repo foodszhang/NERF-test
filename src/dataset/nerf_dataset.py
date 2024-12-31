@@ -11,7 +11,7 @@ from pdb import set_trace as stx
 from src.render import get_pts
 from copy import deepcopy
 import skimage as ski
-from src.util import read_nifti, coord_to_dif_base
+from src.utils import read_nifti, coord_to_dif_base
 
 
 # 这里的各项参数代表的物理含义可以在哪查到呢？
