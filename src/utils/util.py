@@ -12,6 +12,7 @@ import pickle
 
 from skimage.metrics import structural_similarity
 from skimage import img_as_ubyte
+import SimpleITK as sitk
 
 get_mse = lambda x, y: torch.mean((x - y) ** 2)
 
@@ -343,3 +344,72 @@ class SSIM(torch.nn.Module):
             window_size=self.window_size,
             size_average=self.size_average,
         )
+
+
+def read_nifti(path):
+    itk_img = sitk.ReadImage(path)
+    image = sitk.GetArrayFromImage(itk_img)
+    return image
+
+
+def save_nifti(image, path):
+    out = sitk.GetImageFromArray(image)
+    sitk.WriteImage(out, path)
+
+
+def load_names():
+    with open("info.json", "r") as f:
+        info = json.load(f)
+        names = []
+        for s in ["train", "test", "eval"]:
+            names += info[s]
+        return names
+
+
+def coord_to_dif(points, max_val=0.1275, min_val=-0.1275):
+    return ((points - min_val) / (max_val - min_val) * 2) - 1
+
+
+def coord_to_dif_base(points):
+    return (points + 0.1275) / (0.1275 + 0.1275)
+
+
+def coord_to_sax_base(points):
+    return points * 0.1275 - 0.1275
+
+
+def coord_to_sax(points):
+    # (0-1) -> (-0.1275, 0.1275)
+    return points * 0.1275 * 2 - 0.1275
+
+
+# TODO: HARD CODE
+def index_3d(image, uv, max_val=0.1275, min_val=-0.1275):
+    # feat: [D, H, W]
+    # uv: [N, 3]
+    # uv = uv.reshape(1, *uv.shape) # [1, B, N, 3]
+    image = image.unsqueeze(0)  # [1, D, H, W]
+    image = image.unsqueeze(0)  # [1, D, H, W]
+    uv = uv.unsqueeze(0)  # [B, N, 1, 3]
+    uv = uv.unsqueeze(2)  # [B, N, 1, 3]
+    uv = uv.unsqueeze(2)  # [B, N, 1, 3]
+    uv = coord_to_dif(uv, max_val, min_val)  # [B, N, 1, 3]
+    # image = image.transpose(2, 3) # [W, H]
+    samples = torch.nn.functional.grid_sample(
+        image, uv, align_corners=True
+    )  # [B, C, N, 1]
+    return samples[0, 0, :, :, 0]  # [B, C, N]
+
+
+def index_2d(feat, uv):
+    # https://zhuanlan.zhihu.com/p/137271718
+    # feat: [H, W]
+    # uv: [B, N, 2]
+    feat = feat.unsqueeze(0)
+    feat = feat.unsqueeze(0)
+    uv = uv.unsqueeze(0)  # [B, N, 1, 3]
+    feat = feat.transpose(2, 3)  # [W, H]
+    samples = torch.nn.functional.grid_sample(
+        feat, uv, align_corners=True
+    )  # [B, C, N, 1]
+    return samples[0, 0, :, :]  # [B, C, N]
