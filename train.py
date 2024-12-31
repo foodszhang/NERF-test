@@ -150,36 +150,15 @@ class BasicTrainer(Trainer):
         #    dataformats="HWC",
         # )
 
-        proj_pred_origin_dir = osp.join(self.expdir, f"{index}_proj_pred_origin")
-        proj_gt_origin_dir = osp.join(self.expdir, f"{index}_proj_gt_origin")
-        proj_pred_dir = osp.join(self.expdir, f"{index}_proj_pred")
-        proj_gt_dir = osp.join(self.expdir, f"{index}_proj_gt")
+        proj_pred_origin_dir = osp.join(self.expdir, f"proj_pred_origin")
+        proj_gt_origin_dir = osp.join(self.expdir, f"proj_gt_origin")
+        proj_pred_dir = osp.join(self.expdir, f"proj_pred")
+        proj_gt_dir = osp.join(self.expdir, f"proj_gt")
         # os.makedirs(eval_save_dir, exist_ok=True)
         os.makedirs(proj_pred_origin_dir, exist_ok=True)
         os.makedirs(proj_gt_origin_dir, exist_ok=True)
         os.makedirs(proj_pred_dir, exist_ok=True)
         os.makedirs(proj_gt_dir, exist_ok=True)
-
-        # for i in tqdm(range(N)):
-        #    """
-        #    cast_to_image 自带了归一化, 1 - 放在外边
-        #    """
-        #    iio.imwrite(
-        #        osp.join(proj_pred_origin_dir, f"proj_pred_{str(i)}.png"),
-        #        (cast_to_image(projs_pred[i]) * 255).astype(np.uint8),
-        #    )
-        #    iio.imwrite(
-        #        osp.join(proj_gt_origin_dir, f"proj_gt_{str(i)}.png"),
-        #        (cast_to_image(projs[i]) * 255).astype(np.uint8),
-        #    )
-        #    iio.imwrite(
-        #        osp.join(proj_pred_dir, f"proj_pred_{str(i)}.png"),
-        #        ((1 - cast_to_image(projs_pred[i])) * 255).astype(np.uint8),
-        #    )
-        #    iio.imwrite(
-        #        osp.join(proj_gt_dir, f"proj_gt_{str(i)}.png"),
-        #        ((1 - cast_to_image(1 - projs[i])) * 255).astype(np.uint8),
-        #    )
 
         ## stx()
         # for ls in loss.keys():
@@ -189,27 +168,19 @@ class BasicTrainer(Trainer):
         # 保存各种视图
         eval_save_dir = osp.join(self.evaldir, f"epoch_{idx_epoch:05d}")
         os.makedirs(eval_save_dir, exist_ok=True)
-        # np.save(
-        #    osp.join(eval_save_dir, f"{index}image_pred.npy"),
-        #    image_pred.cpu().detach().numpy(),
-        # )
-        # np.save(
-        #    osp.join(eval_save_dir, f"{index}image_gt.npy"),
-        #    image.cpu().detach().numpy(),
-        # )
         output = np.clip(image_pred.cpu().detach().numpy(), 0, 1)
         gt = np.clip(image.cpu().detach().numpy(), 0, 1)
         output *= 255.0
         gt *= 255.0
         output = output.astype(np.uint8)
         gt = gt.astype(np.uint8)
-        save_path = os.path.join(eval_save_dir, f"{index}.nii.gz")
-        gt_save_path = os.path.join(eval_save_dir, f"{index}_gt.nii.gz")
+        save_path = os.path.join(eval_save_dir, f"pred.nii.gz")
+        gt_save_path = os.path.join(eval_save_dir, f"gt.nii.gz")
         save_nifti(output, save_path)
         save_nifti(gt, gt_save_path)
 
         iio.imwrite(
-            osp.join(eval_save_dir, f"{index}slice_show_row1_gt_row2_pred.png"),
+            osp.join(eval_save_dir, f"slice_show_row1_gt_row2_pred.png"),
             (cast_to_image(show_density) * 255).astype(np.uint8),
         )
         with open(osp.join(eval_save_dir, "stats.txt"), "w") as f:
