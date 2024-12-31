@@ -6,7 +6,7 @@ import numpy as np
 from tqdm import tqdm
 import argparse
 import skimage as ski
-from src.utils import coord_to_dif_base
+from src.utils import coord_to_dif_base, save_nifti
 
 
 def config_parser():
