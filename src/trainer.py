@@ -9,6 +9,7 @@ import numpy as np
 
 from .dataset import NerfDataset as Dataset
 
+from torch.utils.data import DataLoader
 from .utils import gen_log, time2file_name
 import datetime
 
@@ -62,14 +63,6 @@ class Trainer:
         """
             eval 和 train dataset 并不相同
         """
-        train_dset = Dataset(
-            cfg["exp"]["datadir"], cfg["train"]["n_rays"], "train", device
-        )  # 由dataset去构造数据集
-        self.eval_dset = (
-            Dataset(cfg["exp"]["datadir"], cfg["train"]["n_rays"], "val", device)
-            if self.i_eval > 0
-            else None
-        )
         # stx()
         train_dataset = Dataset(
             cfg["exp"]["train_datadir"],
