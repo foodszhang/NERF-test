@@ -21,7 +21,6 @@ class DensityNetwork(nn.Module):
         self.skips = skips
         self.encoder = encoder
         self.in_dim = encoder.output_dim
-        self.image_encoder = image_encoder
         self.bound = bound
 
         # Linear layers
