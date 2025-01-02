@@ -63,7 +63,7 @@ class BasicTrainer(Trainer):
         # stx()
         loss = {"loss": 0.0}
         # stx()
-        image_pred = self.net(data)
+        image_pred, _, _ = self.net(data)
         image = data["image"]
         image = image.reshape(-1)
         image_pred = image_pred.reshape(-1)

@@ -197,6 +197,7 @@ class DIF_Net(nn.Module):
         q = q.permute(0, 2, 1)
         # q = (q - q.min()) / (q.max() - q.min())
         # p_feats = (p_feats - p_feats.min()) / (p_feats.max() - p_feats.min())
+        proj_feats = p_feats
         p_feats = torch.cat([p_feats, q], dim=1)
 
         # p_pred = self.point_classifier(p_feats)
@@ -208,4 +209,4 @@ class DIF_Net(nn.Module):
         # q_pred = q_pred.permute(0, 2, 1)
         # pred = (1 - self.combine_arg) * p_pred + q_pred * self.combine_arg
         # return p_pred, q_pred
-        return p_pred
+        return p_pred, proj_feats, q

@@ -21,6 +21,7 @@ class DensityNetwork(nn.Module):
         self.skips = skips
         self.encoder = encoder
         self.in_dim = encoder.output_dim
+        self.image_encoder = image_encoder
         self.bound = bound
 
         # Linear layers
@@ -54,9 +55,13 @@ class DensityNetwork(nn.Module):
         input: (N_rays x N_samples, 3)
         经过encoder后变成: (N_rays x N_samples, 32)
         """
-        x = self.encoder(x, self.bound)  # encoder 把 x 从低维变成高维
+        pos = x["pos"]
+        p_feats = x["p_feats"]
+        pos = self.encoder(pos, self.bound)  # encoder 把 x 从低维变成高维
+        print("qq123123123", p_feats.shape, pos.shape)
+        p_feats = torch.cat([p_feats, pos], dim=1)
 
-        input_pts = x[..., : self.in_dim]  # 就是x
+        input_pts = p_feats[..., : self.in_dim]  # 就是x
 
         for i in range(len(self.layers)):
 

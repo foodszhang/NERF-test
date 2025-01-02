@@ -155,14 +155,15 @@ def run_network_with_dif(pts, projs, proj_pts, nerf_net, dif_net, netchunk=40960
     for i in range(n_batch):
         left = i * netchunk
         right = min((i + 1) * netchunk, total_npoint)
-        dif_out = dif_net(
+        dif_out, p_feats, _ = dif_net(
             {
                 "pts": pts[..., left:right, :],
                 "projections": projs,
                 "proj_pts": proj_pts[..., left:right, :],
             }
         )
-        nerf_net_out = nerf_net(pts[..., left:right, :])
+        input = {"pts": pts[..., left:right, :], "p_feats": p_feats}
+        nerf_net_out = nerf_net(input)
         nerf_net_out = nerf_net_out.permute((0, 2, 1))
         dif_list.append(dif_out)
         nerf_list.append(nerf_net_out)
