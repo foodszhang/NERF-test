@@ -89,9 +89,10 @@ class BasicTrainer(Trainer):
         # Evaluate projection    渲染投射的 RGB 图
         # stx()
         projs = self.eval_dset.projs  # [256, 256] -> [50, 256, 256]
-        rays = self.eval_dset.rays.reshape(-1, 8)  # [65536,8]  -> [3276800, 8]
-        projs_pred = []
         N, H, W = projs.shape
+        rays = self.eval_dset.rays.reshape(1, -1, 8)  # [65536,8]  -> [3276800, 8]
+        projs = self.eval_dset.projs.reshape(1, N, H, W)
+        projs_pred = []
         for i in tqdm(
             range(0, rays.shape[0], self.n_rays)
         ):  # 每一簇射线是 n_rays ，每隔这么多射线渲染一次
