@@ -8,7 +8,7 @@ class DensityNetwork(nn.Module):
     def __init__(
         self,
         encoder,
-        bound=0.2,
+        bound=0.4,
         num_layers=8,
         feat_dim=640,
         hidden_dim=256,
