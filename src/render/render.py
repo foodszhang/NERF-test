@@ -137,7 +137,7 @@ def run_network(inputs, fn, netchunk):
     return out
 
 
-def run_network_with_dif(pts, projs, proj_pts, nerf_net, dif_net, netchunk=409600):
+def run_network_with_dif(pts, projs, proj_pts, nerf_net, dif_net, netchunk=204800):
     """
     Prepares inputs and applies network "fn".
     inputs: [N_rays, N_sample, 3] - [1024, 192, 3]  训练的时候
@@ -162,8 +162,8 @@ def run_network_with_dif(pts, projs, proj_pts, nerf_net, dif_net, netchunk=40960
                 "proj_pts": proj_pts[..., left:right, :],
             }
         )
-        input = {"pts": pts[..., left:right, :], "p_feats": p_feats}
-        nerf_net_out = nerf_net(input)
+        inputs = {"pts": pts[..., left:right, :], "p_feats": p_feats}
+        nerf_net_out = nerf_net(inputs)
         nerf_net_out = nerf_net_out.permute((0, 2, 1))
         dif_list.append(dif_out)
         nerf_list.append(nerf_net_out)
