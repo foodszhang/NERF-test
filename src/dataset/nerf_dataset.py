@@ -205,9 +205,9 @@ class NerfDataset(Dataset):
 
     def __len__(self):
         if self.type == "train":
-            return len(self.cfg["train"])
+            return self.n_views
         else:
-            return len(self.cfg["eval"])
+            return self.n_views
 
     def __getitem__(self, index):
         if self.type == "train":
