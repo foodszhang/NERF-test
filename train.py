@@ -75,7 +75,6 @@ class BasicTrainer(Trainer):
         # stx()
         projs_pred = ret["acc"]
         loss = {"loss": 0.0}
-        print("444qasd", projs_pred.shape, projs.shape)
         calc_mse_loss(loss, projs, projs_pred)
         # Log
         for ls in loss.keys():
