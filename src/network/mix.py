@@ -170,7 +170,10 @@ class DIF_Net(nn.Module):
                 pred_list.append(p_pred)
 
         pred = torch.cat(pred_list, dim=2)
-        p_feats = torch.cat(p_feats_list, dim=2)
+        if self.training:
+            p_feats = torch.cat(p_feats_list, dim=2)
+        else:
+            p_feats = None
         return pred, p_feats
 
     # points -> (10. 1024x10, 3)
