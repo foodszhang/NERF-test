@@ -88,18 +88,25 @@ class BasicTrainer(Trainer):
         """
         # Evaluate projection    渲染投射的 RGB 图
         # stx()
-        # projs_pred = []
-        # for i in tqdm(range(0, rays.shape[0], self.n_rays)):     # 每一簇射线是 n_rays ，每隔这么多射线渲染一次
-        #    projs_pred.append(render(rays[i:i+self.n_rays], self.net, self.dif_net, self.net_fine, **self.conf["render"])["acc"])
-        # projs_pred = torch.cat(projs_pred, 0).reshape(N, H, W)
+        projs = self.eval_dset.projs  # [256, 256] -> [50, 256, 256]
+        rays = self.eval_dset.rays.reshape(-1, 8)  # [65536,8]  -> [3276800, 8]
+        projs_pred = []
+        N, H, W = projs.shape
+        for i in tqdm(
+            range(0, rays.shape[0], self.n_rays)
+        ):  # 每一簇射线是 n_rays ，每隔这么多射线渲染一次
+            ret = render_dif(
+                rays[i : i + self.n_rays],
+                projs,
+                self.net,
+                self.dif_net,
+                self.eval_dset,
+                self.conf["render"]["n_samples"],
+            )
+            projs_pred.append(ret)
+        projs_pred = torch.cat(projs_pred, 0).reshape(N, H, W)
 
         # Evaluate density      渲染3D图像
-        loss = {
-            # "proj_psnr": 0.0,
-            # "proj_ssim": get_ssim(projs_pred, projs),
-            "psnr_3d": 0.0,
-            "ssim_3d": 0.0,
-        }
         # pts = self.eval_dset.voxels.reshape(-1, 3)
         # q = coord_to_dif_base(pts)
         pts = self.eval_dset.points
@@ -131,7 +138,12 @@ class BasicTrainer(Trainer):
         image = image.reshape(256, 256, 256)
         image_pred = raw.reshape(256, 256, 256)
         # stx()
-        loss["ssim_3d"] += get_ssim_3d(image_pred, image)
+        loss = {
+            "proj_psnr": get_psnr(projs_pred, projs),
+            "proj_ssim": get_ssim(projs_pred, projs),
+            "psnr_3d": get_psnr_3d(image_pred, image),
+            "ssim_3d": get_ssim_3d(image_pred, image),
+        }
 
         show_slice = 5
         show_step = image.shape[-1] // show_slice
@@ -163,6 +175,26 @@ class BasicTrainer(Trainer):
         os.makedirs(proj_gt_origin_dir, exist_ok=True)
         os.makedirs(proj_pred_dir, exist_ok=True)
         os.makedirs(proj_gt_dir, exist_ok=True)
+        for i in tqdm(range(N)):
+            """
+            cast_to_image 自带了归一化, 1 - 放在外边
+            """
+            iio.imwrite(
+                osp.join(proj_pred_origin_dir, f"proj_pred_{str(i)}.png"),
+                (cast_to_image(projs_pred[i]) * 255).astype(np.uint8),
+            )
+            iio.imwrite(
+                osp.join(proj_gt_origin_dir, f"proj_gt_{str(i)}.png"),
+                (cast_to_image(projs[i]) * 255).astype(np.uint8),
+            )
+            iio.imwrite(
+                osp.join(proj_pred_dir, f"proj_pred_{str(i)}.png"),
+                ((1 - cast_to_image(projs_pred[i])) * 255).astype(np.uint8),
+            )
+            iio.imwrite(
+                osp.join(proj_gt_dir, f"proj_gt_{str(i)}.png"),
+                ((1 - cast_to_image(1 - projs[i])) * 255).astype(np.uint8),
+            )
 
         ## stx()
         # for ls in loss.keys():
@@ -204,7 +236,7 @@ class BasicTrainer(Trainer):
             )
             self.best_ssim_3d = loss["ssim_3d"]
             self.logger.info(
-                f"best model update, epoch:{idx_epoch}, best 3d psnr:{self.best_ssim_3d:.4g}"
+                f"best model update, epoch:{idx_epoch}, best 3d ssim:{self.best_ssim_3d:.4g}"
             )
 
             # stx()
