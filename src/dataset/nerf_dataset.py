@@ -244,10 +244,7 @@ class NerfDataset(Dataset):
             #    coords = torch.tensor(coords, dtype=torch.float32, device=self.device)
             #    cl.append(coords)
             # coords = torch.stack(cl, dim=0)
-            out = {
-                "projs": self.projs,
-                "rays": rays,
-            }
+            out = {"projs": self.projs, "rays": rays, "projs_pts": projs}
             return out
         elif self.type == "val":
             raise Exception("Not implemented")
