@@ -225,7 +225,8 @@ class BasicTrainer(Trainer):
                 f.write("%s: %f\n" % (key, value))
 
         # loss["ssim_3d_avg"] = loss["ssim_3d"] / len(self.eval_dset)
-        if loss["ssim_3d"] > self.best_ssim_3d:
+        # if loss["ssim_3d"] > self.best_ssim_3d:
+        if loss["psnr_3d"] > self.best_psnr_3d:
             torch.save(
                 {
                     "epoch": idx_epoch,
@@ -235,7 +236,8 @@ class BasicTrainer(Trainer):
                 },
                 self.ckpt_best_dir,
             )
-            self.best_ssim_3d = loss["ssim_3d"]
+            # self.best_ssim_3d = loss["ssim_3d"]
+            self.best_psnr_3d = loss["psnr_3d"]
             self.logger.info(
                 f"best model update, epoch:{idx_epoch}, best 3d ssim:{self.best_ssim_3d:.4g}, psnr:{loss['psnr_3d']:.4g}"
             )

@@ -99,6 +99,7 @@ class BasicTrainer(Trainer):
             image_pred = image_pred.reshape(256, 256, 256)
             # stx()
             loss["ssim_3d"] += get_ssim_3d(image_pred, image)
+            loss["psnr_3d"] += get_psnr_3d(image_pred, image)
 
             show_slice = 5
             show_step = image.shape[-1] // show_slice
@@ -199,7 +200,7 @@ class BasicTrainer(Trainer):
             )
             self.best_ssim_3d = loss["ssim_3d"]
             self.logger.info(
-                f"best model update, epoch:{idx_epoch}, best 3d psnr:{self.best_ssim_3d:.4g}"
+                f"best model update, epoch:{idx_epoch}, best 3d ssim_3d:{self.best_ssim_3d:.4g}"
             )
 
             # stx()
