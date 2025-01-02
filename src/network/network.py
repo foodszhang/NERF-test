@@ -60,8 +60,8 @@ class DensityNetwork(nn.Module):
         pts = self.encoder(pts, self.bound)  # encoder 把 x 从低维变成高维
         p_feats = p_feats.permute(0, 2, 1)
         p_feats = torch.cat([p_feats, pts], dim=2)
-
         input_pts = p_feats[..., : self.in_dim]  # 就是x
+        x = input_pts
 
         for i in range(len(self.layers)):
 
