@@ -190,7 +190,7 @@ class NerfDataset(Dataset):
             -1,
         )
         self.coords = torch.reshape(coords, [-1, 2])
-        name = self.cfg["val"][0]
+        name = self.cfg["eval"][0]
         image_path = self.cfg["image"].format(name)
         image = read_nifti(image_path)
         image_prob = image.reshape(-1)
