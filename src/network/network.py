@@ -54,11 +54,11 @@ class DensityNetwork(nn.Module):
         input: (N_rays x N_samples, 3)
         经过encoder后变成: (N_rays x N_samples, 32)
         """
-        pos = x["pos"]
+        pts = x["pts"]
         p_feats = x["p_feats"]
-        pos = self.encoder(pos, self.bound)  # encoder 把 x 从低维变成高维
-        print("qq123123123", p_feats.shape, pos.shape)
-        p_feats = torch.cat([p_feats, pos], dim=1)
+        pts = self.encoder(pts, self.bound)  # encoder 把 x 从低维变成高维
+        print("qq123123123", p_feats.shape, pts.shape)
+        p_feats = torch.cat([p_feats, pts], dim=1)
 
         input_pts = p_feats[..., : self.in_dim]  # 就是x
 
