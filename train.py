@@ -90,7 +90,7 @@ class BasicTrainer(Trainer):
         # stx()
         projs = self.eval_dset.projs  # [256, 256] -> [50, 256, 256]
         N, H, W = projs.shape
-        rays = self.eval_dset.rays.reshape(1, -1, 8)  # [65536,8]  -> [3276800, 8]
+        rays = self.eval_dset.rays.reshape(-1, 8)  # [65536,8]  -> [3276800, 8]
         projs = self.eval_dset.projs.reshape(1, N, H, W)
         projs_pred = []
         for i in tqdm(
