@@ -149,7 +149,7 @@ class DIF_Net(nn.Module):
         for i in range(n_batch):
             left = i * eval_npoint
             right = min((i + 1) * eval_npoint, total_npoint)
-            if self.training:
+            if not self.training:
                 p_pred, p_feats = self.forward_points(
                     proj_feats,
                     {
