@@ -10,6 +10,7 @@ class DensityNetwork(nn.Module):
         encoder,
         bound=0.2,
         num_layers=8,
+        feat_dim=640,
         hidden_dim=256,
         skips=[4],
         out_dim=1,
@@ -20,7 +21,7 @@ class DensityNetwork(nn.Module):
         self.hidden_dim = hidden_dim
         self.skips = skips
         self.encoder = encoder
-        self.in_dim = encoder.output_dim
+        self.in_dim = feat_dim + encoder.output_dim
         self.bound = bound
 
         # Linear layers
@@ -57,6 +58,7 @@ class DensityNetwork(nn.Module):
         pts = x["pts"]
         p_feats = x["p_feats"]
         pts = self.encoder(pts, self.bound)  # encoder 把 x 从低维变成高维
+        p_feats = p_feats.permute(0, 2, 1)
         print("qq123123123", p_feats.shape, pts.shape)
         p_feats = torch.cat([p_feats, pts], dim=1)
 
