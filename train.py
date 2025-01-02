@@ -60,6 +60,9 @@ class BasicTrainer(Trainer):
         # stx()
         rays = data["rays"].reshape(-1, 8)  # [1, 1024, 8] -> [1024, 8]
 
+        projs = data["projs"].reshape(
+            -1
+        )  # projection 的 ground truth [1, 1024] -> [1024]
         # ret = render(rays, self.net, self.net_fine, **self.conf["render"])
         ret = render_dif(
             rays,
@@ -72,6 +75,7 @@ class BasicTrainer(Trainer):
         # stx()
         projs_pred = ret["acc"]
         loss = {"loss": 0.0}
+        print("444qasd", projs_pred.shape, projs.shape)
         calc_mse_loss(loss, projs, projs_pred)
         # Log
         for ls in loss.keys():
