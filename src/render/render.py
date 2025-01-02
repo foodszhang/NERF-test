@@ -155,7 +155,7 @@ def run_network_with_dif(pts, projs, proj_pts, nerf_net, dif_net, netchunk=20480
     for i in range(n_batch):
         left = i * netchunk
         right = min((i + 1) * netchunk, total_npoint)
-        dif_out, p_feats, _ = dif_net(
+        dif_out, p_feats = dif_net(
             {
                 "pts": pts[..., left:right, :],
                 "projections": projs,

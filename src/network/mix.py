@@ -150,7 +150,7 @@ class DIF_Net(nn.Module):
         for i in range(n_batch):
             left = i * eval_npoint
             right = min((i + 1) * eval_npoint, total_npoint)
-            p_pred, p_feats, q = self.forward_points(
+            p_pred, p_feats = self.forward_points(
                 proj_feats,
                 {
                     "proj_pts": data["proj_pts"][..., left:right, :],
@@ -215,4 +215,4 @@ class DIF_Net(nn.Module):
         # q_pred = q_pred.permute(0, 2, 1)
         # pred = (1 - self.combine_arg) * p_pred + q_pred * self.combine_arg
         # return p_pred, q_pred
-        return p_pred, proj_feats, q
+        return p_pred, proj_feats
