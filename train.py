@@ -115,6 +115,7 @@ class BasicTrainer(Trainer):
             )
             cl.append(coords)
         coords = torch.stack(cl, dim=0)
+        pts = torch.tensor(pts, dtype=torch.float32, device=self.eval_dset.device)
         pts = pts.reshape(1, *pts.shape)
         coords = coords.reshape(1, *coords.shape)
         projs = self.eval_dset.projs.reshape(-1, *self.eval_dset.projs.shape)
