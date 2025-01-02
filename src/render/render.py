@@ -38,6 +38,7 @@ def get_pts(rays, n_samples, perturb=None):
 
 def render_dif(rays, projs, net, dif_net, dataset, n_samples):
     pts, z_vals, rays_o, rays_d = get_pts(rays, n_samples, True)
+    n_rays = rays.shape[0]
     pts = pts.reshape(-1, 3)
     q = coord_to_dif_base(pts)
     cl = []
@@ -58,6 +59,7 @@ def render_dif(rays, projs, net, dif_net, dataset, n_samples):
         net,
         dif_net,
     )  # run_network 输出衰减系数μ
+    raw = raw.reshape(n_rays, -1, 1)
     acc, weights = raw2outputs(raw, z_vals, rays_d)  # acc 和 weights 各自的含义是？
     ret = {"acc": acc, "pts": pts, "raw": raw, "weights": weights}
     for k in ret:
