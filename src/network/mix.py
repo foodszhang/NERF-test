@@ -150,13 +150,14 @@ class DIF_Net(nn.Module):
             left = i * eval_npoint
             right = min((i + 1) * eval_npoint, total_npoint)
             if not self.training:
-                p_pred, p_feats = self.forward_points(
+                p_pred, _ = self.forward_points(
                     proj_feats,
                     {
                         "proj_pts": data["proj_pts"][..., left:right, :],
                         "pts": data["pts"][..., left:right, :],
                     },
                 )  # B, C, N
+
                 pred_list.append(p_pred)
                 p_feats_list.append(p_feats)
             else:
@@ -171,7 +172,9 @@ class DIF_Net(nn.Module):
 
         pred = torch.cat(pred_list, dim=2)
         if not self.training:
-            p_feats = torch.cat(p_feats_list, dim=2)
+            # p_feats = torch.cat(p_feats_list, dim=2)
+            # p_feats = torch.cat(p_feats_list, dim=2)
+            p_feats = None
         else:
             p_feats = None
         return pred, p_feats
