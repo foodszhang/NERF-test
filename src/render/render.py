@@ -52,11 +52,10 @@ def render_dif(rays, projs, net, dif_net, dataset, n_samples):
     coords = coords.reshape(1, *coords.shape)
     proj_pt = coords
 
-    raw = run_network_with_dif(
+    raw = run_dif_network(
         pts,
         projs,
         proj_pt,
-        net,
         dif_net,
     )  # run_network 输出衰减系数μ
     raw = raw.reshape(n_rays, -1, 1)
@@ -65,6 +64,36 @@ def render_dif(rays, projs, net, dif_net, dataset, n_samples):
     for k in ret:
         if torch.isnan(ret[k]).any() or torch.isinf(ret[k]).any():
             print(f"! [Numerical Error] {k} contains nan or inf.")
+
+    if net is not None:
+        acc_0 = acc
+        weights_0 = weights
+        pts_0 = pts
+        n_fine = 512
+        bound = 0.3
+        perturb = True
+
+        z_vals_mid = 0.5 * (z_vals[..., 1:] + z_vals[..., :-1])
+        z_samples = sample_pdf(
+            z_vals_mid, weights[..., 1:-1], n_fine, det=(perturb == 0.0)
+        )
+        z_samples = z_samples.detach()
+
+        z_vals, _ = torch.sort(torch.cat([z_vals, z_samples], -1), -1)
+        pts = rays_o[..., None, :] + rays_d[..., None, :] * z_vals[..., :, None]
+        pts = pts.clamp(-bound, bound)
+        raw = run_network_with_dif(
+            pts,
+            projs,
+            proj_pt,
+            net,
+            dif_net,
+        )  # run_network 输出衰减系数μ
+        acc, _ = raw2outputs(raw, z_vals, rays_d)
+        ret = {"acc": acc, "pts": pts, "raw": raw, "weights": weights}
+        ret["acc0"] = acc_0
+        ret["weights0"] = weights_0
+        ret["pts0"] = pts_0
 
     return ret
 
@@ -176,6 +205,38 @@ def run_network_with_dif(pts, projs, proj_pts, nerf_net, dif_net, netchunk=10240
 
     return nerf_out + dif_out
     # return dif_out
+
+
+def run_dif_network(pts, projs, proj_pts, dif_net, netchunk=10240):
+    """
+    Prepares inputs and applies network "fn".
+    inputs: [N_rays, N_sample, 3] - [1024, 192, 3]  训练的时候
+    uvt_flat: [N_rays * N_sample, 3]
+    netchunk: 是409600, 网络每次可以跑 409600 个点
+    所以 NeRF 模型的输入样例应该是 [1024x192, 3]
+
+    测试的时候, input sample 是 (128, 128, 128, 3)
+    out: [1024, 192, 1]
+    """
+    total_npoint = pts.shape[1]
+    n_batch = int(np.ceil(total_npoint / netchunk))
+    dif_list = []
+    for i in range(n_batch):
+        left = i * netchunk
+        right = min((i + 1) * netchunk, total_npoint)
+        dif_out, _ = dif_net(
+            {
+                "pts": pts[..., left:right, :],
+                "projections": projs,
+                "proj_pts": proj_pts[..., left:right, :],
+            }
+        )
+        dif_out = dif_out.detach()
+        dif_list.append(dif_out)
+
+    dif_out = torch.cat(dif_list, dim=2)
+
+    return dif_out
 
 
 def raw2outputs(raw, z_vals, rays_d, raw_noise_std=0.0):
