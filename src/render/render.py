@@ -38,6 +38,8 @@ def get_pts(rays, n_samples, perturb=None):
 
 def render_dif(rays, projs, net, dif_net, dataset, n_samples):
     pts, z_vals, rays_o, rays_d = get_pts(rays, n_samples, True)
+    bound = 0.3
+    pts = pts.clamp(-bound, bound)
     n_rays = rays.shape[0]
     pts = pts.reshape(-1, 3)
     q = coord_to_dif_base(pts)
@@ -82,6 +84,18 @@ def render_dif(rays, projs, net, dif_net, dataset, n_samples):
         z_vals, _ = torch.sort(torch.cat([z_vals, z_samples], -1), -1)
         pts = rays_o[..., None, :] + rays_d[..., None, :] * z_vals[..., :, None]
         pts = pts.clamp(-bound, bound)
+        pts = pts.reshape(-1, 3)
+        q = coord_to_dif_base(pts)
+        cl = []
+        for other_proj_num in range(dataset.n_views):
+            coords = dataset.geo.project(q, dataset.angles[other_proj_num])
+            # coords -> (-1, 1)
+            coords = torch.tensor(coords, dtype=torch.float32, device=dataset.device)
+            cl.append(coords)
+        coords = torch.stack(cl, dim=0)
+        pts = pts.reshape(1, *pts.shape)
+        coords = coords.reshape(1, *coords.shape)
+        proj_pt = coords
         raw = run_network_with_dif(
             pts,
             projs,
