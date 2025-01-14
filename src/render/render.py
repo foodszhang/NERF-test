@@ -206,8 +206,7 @@ def run_network_with_dif(pts, projs, proj_pts, nerf_net, dif_net, netchunk=10240
                 "proj_pts": proj_pts[..., left:right, :],
             }
         )
-        if p_feats:
-            p_feats = p_feats.detach()
+        p_feats = p_feats.detach()
         dif_out = dif_out.detach()
         inputs = {"pts": pts[..., left:right, :], "p_feats": p_feats}
         nerf_net_out = nerf_net(inputs)
