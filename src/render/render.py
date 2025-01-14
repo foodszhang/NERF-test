@@ -218,8 +218,8 @@ def run_network_with_dif(pts, projs, proj_pts, nerf_net, dif_net, netchunk=10240
 
     dif_out = torch.cat(dif_list, dim=2)
 
-    return nerf_out + dif_out
-    # return dif_out
+    # return nerf_out + dif_out
+    return nerf_out
 
 
 def run_dif_network(pts, projs, proj_pts, dif_net, netchunk=10240):
