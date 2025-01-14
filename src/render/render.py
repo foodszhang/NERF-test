@@ -103,6 +103,7 @@ def render_dif(rays, projs, net, dif_net, dataset, n_samples):
             net,
             dif_net,
         )  # run_network 输出衰减系数μ
+        raw = raw.reshape(n_rays, -1, 1)
         acc, _ = raw2outputs(raw, z_vals, rays_d)
         ret = {"acc": acc, "pts": pts, "raw": raw, "weights": weights}
         ret["acc0"] = acc_0
@@ -205,7 +206,8 @@ def run_network_with_dif(pts, projs, proj_pts, nerf_net, dif_net, netchunk=10240
                 "proj_pts": proj_pts[..., left:right, :],
             }
         )
-        p_feats = p_feats.detach()
+        if p_feats:
+            p_feats = p_feats.detach()
         dif_out = dif_out.detach()
         inputs = {"pts": pts[..., left:right, :], "p_feats": p_feats}
         nerf_net_out = nerf_net(inputs)
