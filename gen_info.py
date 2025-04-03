@@ -2,7 +2,7 @@ import os
 import json
 import numpy as np
 
-data_path = "/root/autodl-fs/subset0/"
+data_path = "/data/subset0/"
 # data_path = "./data"
 files = []
 for file in os.listdir(data_path):
