@@ -48,7 +48,7 @@ def save_nifti(image, path):
 
 def main():
     # matPath = f"./dataGenerator/{dataFolder}/{dataType}/img.mat"
-    data_dir = "/root/autodl-fs/subset0"
+    data_dir = "/data/subset0"
     configPath = f"./config.yml"
     out_dir = "./data/luna16"
     infoPath = osp.join(out_dir, "info.json")
