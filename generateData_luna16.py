@@ -29,7 +29,7 @@ def config_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument("--ctName", default="luna16", type=str, help="Name of CT")
     parser.add_argument(
-        "--outputName", default="luna16_50_256", type=str, help="Name of output data"
+        "--outputName", default="luna16_10_256", type=str, help="Name of output data"
     )
     parser.add_argument(
         "--dataFolder", default="raw_data", type=str, help="folder of raw data"
