@@ -9,7 +9,7 @@ for file in os.listdir(data_path):
     if file.endswith("mhd"):
         files.append(file)
 data = {"train": [], "eval": [], "test": []}
-data["train"] = files[-3:]
+data["train"] = files[:-3][:20]
 data["eval"] = files[-2:-1]
 data["test"] = [files[-1]]
 data["n_views"] = 5
