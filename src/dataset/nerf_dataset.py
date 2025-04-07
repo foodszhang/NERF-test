@@ -128,9 +128,7 @@ class NerfDataset(Dataset):
     TIGRE dataset.
     """
 
-    def __init__(
-        self, data_dir, n_rays=1024, n_samples=32, type="train", device="cuda"
-    ):
+    def __init__(self, data_dir, n_rays=1024, type="train", device="cuda"):
         # single
         super().__init__()
         self.data_dir = data_dir
@@ -147,7 +145,6 @@ class NerfDataset(Dataset):
         self.n_rays = n_rays
         self.near, self.far = self.get_near_far(self.geo)
         self.n_views = self.cfg["n_views"]
-        self.n_samples = n_samples
         self.device = device
         self.voxels = torch.tensor(
             self.get_voxels(self.geo), dtype=torch.float32, device=device
@@ -190,12 +187,12 @@ class NerfDataset(Dataset):
             -1,
         )
         self.coords = torch.reshape(coords, [-1, 2])
-        name = self.cfg["eval"][0]
+        name = self.cfg["test"][0]
         image_path = self.cfg["image"].format(name)
         image = read_nifti(image_path)
-        image_prob = image.reshape(-1)
-        image_prob = image_prob + 0.5
-        image_prob = image_prob / image_prob.sum()
+        # image_prob = image.reshape(-1)
+        # image_prob = image_prob + 0.5
+        # image_prob = image_prob / image_prob.sum()
         image = torch.tensor(image, dtype=torch.float32, device=self.device)
         self.image = image
         projection_path = self.cfg["projections"].format(name)
@@ -231,54 +228,11 @@ class NerfDataset(Dataset):
                 index, select_coords[:, 0], select_coords[:, 1]
             ]  # self.rays: [50, 256, 256, 6], index 决定了取哪一个角度或样例，后两项决定了横纵坐标
             projs = self.projs[index, select_coords[:, 0], select_coords[:, 1]]  #
-            # pts, _, _, _ = get_pts(
-            #    rays,
-            #    self.n_samples,
-            # )
-            # pts = pts.reshape(-1, 3)
-            # q = coord_to_dif_base(pts)
-            # cl = []
-            # for other_proj_num in range(self.n_views):
-            #    coords = self.geo.project(q, self.angles[other_proj_num])
-            #    # coords -> (-1, 1)
-            #    coords = torch.tensor(coords, dtype=torch.float32, device=self.device)
-            #    cl.append(coords)
-            # coords = torch.stack(cl, dim=0)
             out = {"projs": self.projs, "rays": rays, "projs_pts": projs}
             return out
         elif self.type == "val":
             raise Exception("Not implemented")
-            rays = self.rays[index]
-            projs = self.projs[index]
-            pts = self.voxels.reshape(-1, 3)
-            pts = pts.reshape(-1, 3)
-            q = coord_to_dif_base(pts)
-            cl = []
-            for other_proj_num in range(self.n_views):
-                coords = self.geo.project(q, self.angles[other_proj_num])
-                # coords -> (-1, 1)
-                coords = torch.tensor(coords, dtype=torch.float32, device=self.device)
-                cl.append(coords)
-            coords = torch.stack(cl, dim=0)
-            out = {
-                "projs": projs,
-                "rays": rays,
-                "proj_pts": coords,
-                "image": self.image,
-            }
-            return out
         return {}
-
-    # def sample_points_pdf(self, points, values=None):
-    #    if values is None:
-    #        choice = np.random.choice(len(points), size=self.npoint, replace=False)
-    #    else:
-    #        choice = np.random.choice(
-    #            len(points), size=self.npoint, replace=False, p=values
-    #        )
-
-    #    points = points[choice]
-    #    return points
 
     def sample_points(self, points, values=None):
         choice = np.random.choice(len(points), size=self.npoint, replace=False)
