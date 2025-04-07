@@ -7,7 +7,9 @@ exp:
     #datadir: ./data/luna16_50.pickle
     #datadir: ./data/luna16_17.pickle
     #datadir: ./data/chest_50.pickle
-  datadir: ./data/luna16/data.pickle
+  #datadir: ./data/luna16/data.pickle
+  train_datadir: ./data/luna16/
+  eval_datadir: ./data/luna16/
 #network:
   #net_type: Lineformer
   #num_layers: 4

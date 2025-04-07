@@ -97,7 +97,7 @@ class Trainer:
         cfg["network"].pop("net_type", None)
         if cfg["image_encoder"] == "dif":
             # stx()
-            self.dif_net = get_network("dif")(cfg["train"]["n_views"], "mlp").to(device)
+            self.dif_net = get_network("dif")(cfg["train"]["n_views"]).to(device)
             ckpt = torch.load("./best_dif.ckpt")
             self.dif_net.load_state_dict(ckpt["network"])
             self.dif_net.eval()
