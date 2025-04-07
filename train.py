@@ -31,10 +31,7 @@ print("!!!!!!", torch.cuda.is_available())
 
 from src.config.configloading import load_config
 from src.render import (
-    render,
-    run_network,
     render_with_image_encoder,
-    run_network_with_dif,
 )
 from src.trainer import Trainer
 from src.loss import calc_mse_loss, calc_tv_loss, compute_tv_norm
@@ -132,12 +129,11 @@ class BasicTrainer(Trainer):
         coords = coords.reshape(1, *coords.shape)
         projs = self.eval_dset.projs.reshape(-1, *self.eval_dset.projs.shape)
         pts = coord_to_sax(pts)
-        raw = run_network_with_dif(
+        raw = run_imagenerf_network(
             pts,
             projs,
             coords,
             self.net,
-            self.dif_net,
         )  # run_network 输出衰减系数μ
         image = self.eval_dset.image
         image = image.reshape(256, 256, 256)

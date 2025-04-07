@@ -53,7 +53,7 @@ def render_with_image_encoder(rays, projs, net, dataset, n_samples):
     coords = coords.reshape(1, *coords.shape)
     proj_pt = coords
 
-    raw = run_dif_network(
+    raw = run_imagenerf_network(
         pts,
         projs,
         proj_pt,
@@ -65,124 +65,6 @@ def render_with_image_encoder(rays, projs, net, dataset, n_samples):
     for k in ret:
         if torch.isnan(ret[k]).any() or torch.isinf(ret[k]).any():
             print(f"! [Numerical Error] {k} contains nan or inf.")
-    return ret
-
-
-def render_dif(rays, projs, net, dif_net, dataset, n_samples):
-    pts, z_vals, rays_o, rays_d = get_pts(rays, n_samples, True)
-    bound = 0.3
-    pts = pts.clamp(-bound, bound)
-    n_rays = rays.shape[0]
-    pts = pts.reshape(-1, 3)
-    q = coord_to_dif_base(pts)
-    cl = []
-    for other_proj_num in range(dataset.n_views):
-        coords = dataset.geo.project(q, dataset.angles[other_proj_num])
-        # coords -> (-1, 1)
-        coords = torch.tensor(coords, dtype=torch.float32, device=dataset.device)
-        cl.append(coords)
-    coords = torch.stack(cl, dim=0)
-    pts = pts.reshape(1, *pts.shape)
-    coords = coords.reshape(1, *coords.shape)
-    proj_pt = coords
-
-    raw = run_dif_network(
-        pts,
-        projs,
-        proj_pt,
-        image_encoder,
-    )  # run_network 输出衰减系数μ
-    raw = raw.reshape(n_rays, -1, 1)
-    acc, weights = raw2outputs(raw, z_vals, rays_d)  # acc 和 weights 各自的含义是？
-    ret = {"acc": acc, "pts": pts, "raw": raw, "weights": weights}
-    for k in ret:
-        if torch.isnan(ret[k]).any() or torch.isinf(ret[k]).any():
-            print(f"! [Numerical Error] {k} contains nan or inf.")
-
-    if net is not None:
-        acc_0 = acc
-        weights_0 = weights
-        pts_0 = pts
-        n_fine = 512
-        bound = 0.3
-        perturb = True
-
-        z_vals_mid = 0.5 * (z_vals[..., 1:] + z_vals[..., :-1])
-        z_samples = sample_pdf(
-            z_vals_mid, weights[..., 1:-1], n_fine, det=(perturb == 0.0)
-        )
-        z_samples = z_samples.detach()
-
-        z_vals, _ = torch.sort(torch.cat([z_vals, z_samples], -1), -1)
-        pts = rays_o[..., None, :] + rays_d[..., None, :] * z_vals[..., :, None]
-        pts = pts.clamp(-bound, bound)
-        pts = pts.reshape(-1, 3)
-        q = coord_to_dif_base(pts)
-        cl = []
-        for other_proj_num in range(dataset.n_views):
-            coords = dataset.geo.project(q, dataset.angles[other_proj_num])
-            # coords -> (-1, 1)
-            coords = torch.tensor(coords, dtype=torch.float32, device=dataset.device)
-            cl.append(coords)
-        coords = torch.stack(cl, dim=0)
-        pts = pts.reshape(1, *pts.shape)
-        coords = coords.reshape(1, *coords.shape)
-        proj_pt = coords
-        raw = run_network_with_dif(
-            pts,
-            projs,
-            proj_pt,
-            net,
-            dif_net,
-        )  # run_network 输出衰减系数μ
-        raw = raw.reshape(n_rays, -1, 1)
-        acc, _ = raw2outputs(raw, z_vals, rays_d)
-        ret = {"acc": acc, "pts": pts, "raw": raw, "weights": weights}
-        ret["acc0"] = acc_0
-        ret["weights0"] = weights_0
-        ret["pts0"] = pts_0
-
-    return ret
-
-
-def render(rays, net, net_fine, n_samples, n_fine, perturb, netchunk, raw_noise_std):
-    pts, z_vals, rays_o, rays_d = get_pts(rays, n_samples, perturb)
-    # 此处的pts是在rays上的采样点
-    bound = net.bound - 1e-6
-    pts = pts.clamp(-bound, bound)
-    raw = run_network(pts, net, netchunk)  # run_network 输出衰减系数μ
-    acc, weights = raw2outputs(
-        raw, z_vals, rays_d, raw_noise_std
-    )  # acc 和 weights 各自的含义是？
-
-    if net_fine is not None and n_fine > 0:
-        acc_0 = acc
-        weights_0 = weights
-        pts_0 = pts
-
-        z_vals_mid = 0.5 * (z_vals[..., 1:] + z_vals[..., :-1])
-        z_samples = sample_pdf(
-            z_vals_mid, weights[..., 1:-1], n_fine, det=(perturb == 0.0)
-        )
-        z_samples = z_samples.detach()
-
-        z_vals, _ = torch.sort(torch.cat([z_vals, z_samples], -1), -1)
-        pts = rays_o[..., None, :] + rays_d[..., None, :] * z_vals[..., :, None]
-        pts = pts.clamp(-bound, bound)
-        raw = run_network(pts, net_fine, netchunk)
-        acc, _ = raw2outputs(raw, z_vals, rays_d, raw_noise_std)
-
-    ret = {"acc": acc, "pts": pts, "raw": raw, "weights": weights}
-
-    if net_fine is not None and n_fine > 0:
-        ret["acc0"] = acc_0
-        ret["weights0"] = weights_0
-        ret["pts0"] = pts_0
-
-    for k in ret:
-        if torch.isnan(ret[k]).any() or torch.isinf(ret[k]).any():
-            print(f"! [Numerical Error] {k} contains nan or inf.")
-
     return ret
 
 
@@ -213,48 +95,7 @@ def run_network(inputs, fn, netchunk):
     return out
 
 
-def run_network_with_dif(pts, projs, proj_pts, nerf_net, dif_net, netchunk=10240):
-    """
-    Prepares inputs and applies network "fn".
-    inputs: [N_rays, N_sample, 3] - [1024, 192, 3]  训练的时候
-    uvt_flat: [N_rays * N_sample, 3]
-    netchunk: 是409600, 网络每次可以跑 409600 个点
-    所以 NeRF 模型的输入样例应该是 [1024x192, 3]
-
-    测试的时候, input sample 是 (128, 128, 128, 3)
-    out: [1024, 192, 1]
-    """
-    total_npoint = pts.shape[1]
-    n_batch = int(np.ceil(total_npoint / netchunk))
-    dif_list = []
-    nerf_list = []
-    for i in range(n_batch):
-        left = i * netchunk
-        right = min((i + 1) * netchunk, total_npoint)
-        dif_out, p_feats = dif_net(
-            {
-                "pts": pts[..., left:right, :],
-                "projections": projs,
-                "proj_pts": proj_pts[..., left:right, :],
-            }
-        )
-        p_feats = p_feats.detach()
-        dif_out = dif_out.detach()
-        inputs = {"pts": pts[..., left:right, :], "p_feats": p_feats}
-        nerf_net_out = nerf_net(inputs)
-        nerf_net_out = nerf_net_out.permute((0, 2, 1))
-        dif_list.append(dif_out)
-        nerf_list.append(nerf_net_out)
-
-    nerf_out = torch.cat(nerf_list, dim=2)
-
-    dif_out = torch.cat(dif_list, dim=2)
-
-    # return nerf_out + dif_out
-    return nerf_out
-
-
-def run_dif_network(pts, projs, proj_pts, dif_net, netchunk=10240):
+def run_imagenerf_network(pts, projs, proj_pts, imagenerf_net, netchunk=10240):
     """
     Prepares inputs and applies network "fn".
     inputs: [N_rays, N_sample, 3] - [1024, 192, 3]  训练的时候
@@ -271,18 +112,17 @@ def run_dif_network(pts, projs, proj_pts, dif_net, netchunk=10240):
     for i in range(n_batch):
         left = i * netchunk
         right = min((i + 1) * netchunk, total_npoint)
-        dif_out = dif_net(
+        nerf_out = imagenerf_net(
             {
                 "pts": pts[..., left:right, :],
                 "projections": projs,
                 "proj_pts": proj_pts[..., left:right, :],
             }
         )
-        dif_out = dif_out.detach()
-        dif_list.append(dif_out)
+        nerf_out = nerf_out.detach()
+        nerf_out.append(nerf_out)
 
-    dif_out = torch.cat(dif_list, dim=2)
-
+    dif_out = torch.cat(dif_list, dim=1)
     return dif_out
 
 

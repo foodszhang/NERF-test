@@ -16,7 +16,7 @@ def coord_to_dif(points):
 
 
 mlp_config = {
-    "otype": "FullyFusedMLP",
+    "otype": "CutlassMLP",
     "activation": "ReLU",
     "output_activation": "Softplus",
     "n_neurons": 128,
@@ -195,4 +195,4 @@ class ImageNerfNetwork(nn.Module):
         p_feats = torch.cat(p_list, dim=1)  # B, C, N, M
         x = [self.mlp(p_feat.view(-1, self.feat_dim)) for p_feat in p_feats]
         x = torch.cat(x, dim=1)  # B, C, N, M
-        return x
+        return x.view(b, -1)
