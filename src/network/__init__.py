@@ -13,6 +13,6 @@ def get_network(type):
     elif type == "mix":
         return MixNet
     elif type == "ImageNerf":
-        return ImageNerf
+        return ImageNerfNetwork
     else:
         raise NotImplementedError("Unknown network type!")
