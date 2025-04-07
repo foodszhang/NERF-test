@@ -86,7 +86,7 @@ class Trainer:
         # encoder = get_encoder(**cfg["encoder"])
         # stx()
         # self.net = network(encoder, **cfg["network"]).to(device)
-        self.net = get_network("dif")(cfg["train"]["n_views"], "mlp").to(device)
+        self.net = get_network("dif")(cfg["train"]["n_views"]).to(device)
         grad_vars = list(self.net.parameters())
 
         # Optimizer，优化器及LR策略

@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+import tinycudann as tcnn
 
 from .unet import UNet
 from .unet3 import UNet3Plus
@@ -12,6 +13,15 @@ from src.encoder import get_encoder
 
 def coord_to_dif(points):
     return ((points + 0.1275) / (0.1275 + 0.1275) * 2) - 1
+
+
+mlp_config = {
+    "otype": "FullyFusedMLP",
+    "activation": "ReLU",
+    "output_activation": "Softplus",
+    "n_neurons": 128,
+    "n_hidden_layers": 5,
+}
 
 
 def index_2d(feat, uv):
@@ -52,7 +62,6 @@ class DIF_Net(nn.Module):
         position_encoding="hashgrid",
     ):
         super().__init__()
-        self.combine = combine
         if image_encoding == "unet":
             self.image_encoding = "unet"
             self.image_encoder = UNet(1, mid_ch)
@@ -151,29 +160,7 @@ class ImageNerfNetwork(nn.Module):
         self.bound = bound
 
         # Linear layers
-        self.layers = nn.ModuleList(
-            [nn.Linear(self.in_dim, hidden_dim)]
-            + [
-                (
-                    nn.Linear(hidden_dim, hidden_dim)
-                    if i not in skips
-                    else nn.Linear(hidden_dim + self.in_dim, hidden_dim)
-                )
-                for i in range(1, num_layers - 1, 1)
-            ]
-        )
-        self.layers.append(nn.Linear(hidden_dim, out_dim))
-
-        # Activations
-        self.activations = nn.ModuleList(
-            [nn.LeakyReLU() for i in range(0, num_layers - 1, 1)]
-        )
-        if last_activation == "sigmoid":
-            self.activations.append(nn.Sigmoid())
-        elif last_activation == "relu":
-            self.activations.append(nn.LeakyReLU())
-        else:
-            raise NotImplementedError("Unknown last activation")
+        self.mlp = tcnn.Network(feat_dim, 1, mlp_config)
 
     def forward(self, x):
         # stx()
@@ -203,18 +190,5 @@ class ImageNerfNetwork(nn.Module):
             p_feats = torch.cat(f_list, dim=1)
             p_list.append(p_feats)
         p_feats = torch.cat(p_list, dim=1)  # B, C, N, M
-        input_pts = p_feats[..., : self.in_dim]  # 就是x
-        x = input_pts
-
-        for i in range(len(self.layers)):
-
-            linear = self.layers[i]
-            activation = self.activations[i]
-
-            if i in self.skips:
-                x = torch.cat([input_pts, x], -1)
-
-            x = linear(x)
-            x = activation(x)
-
+        x = self.mlp(p_feats)
         return x
