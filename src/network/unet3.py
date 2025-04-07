@@ -216,6 +216,7 @@ class UNet3Plus(nn.Module):
             self.encoder.channels[1:],
             skip_ch=skip_ch,
             dropout=dropout,
+            fast_up=fast_up,
             am=am,
         )
         self.decoder.apply(weight_init)
