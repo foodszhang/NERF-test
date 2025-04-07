@@ -76,14 +76,12 @@ class Trainer:
         train_dataset = Dataset(
             cfg["exp"]["train_datadir"],
             cfg["train"]["n_rays"],
-            cfg["train"]["n_samples"],
             "train",
             device,
         )  # 由dataset去构造数据集
         val_dataset = Dataset(
             cfg["exp"]["eval_datadir"],
             cfg["train"]["n_rays"],
-            cfg["train"]["n_samples"],
             "val",
             device,
         )  # 由val
