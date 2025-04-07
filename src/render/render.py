@@ -108,7 +108,7 @@ def run_imagenerf_network(pts, projs, proj_pts, imagenerf_net, netchunk=10240):
     """
     total_npoint = pts.shape[1]
     n_batch = int(np.ceil(total_npoint / netchunk))
-    dif_list = []
+    nerf_list = []
     for i in range(n_batch):
         left = i * netchunk
         right = min((i + 1) * netchunk, total_npoint)
@@ -119,11 +119,10 @@ def run_imagenerf_network(pts, projs, proj_pts, imagenerf_net, netchunk=10240):
                 "proj_pts": proj_pts[..., left:right, :],
             }
         )
-        nerf_out = nerf_out.detach()
-        nerf_out.append(nerf_out)
+        nerf_list.append(nerf_out)
 
-    dif_out = torch.cat(dif_list, dim=1)
-    return dif_out
+    nerf_out = torch.cat(nerf_list, dim=1)
+    return nerf_out
 
 
 def raw2outputs(raw, z_vals, rays_d, raw_noise_std=0.0):

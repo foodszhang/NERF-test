@@ -28,7 +28,6 @@ print("!!!!!!", torch.cuda.is_available)
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
 
 from src.config.configloading import load_config
-from src.render import render_dif, run_network, get_pts
 from src.multi_trainer import Trainer
 from src.loss import calc_mse_loss
 from src.utils import get_psnr, get_ssim, get_psnr_3d, get_ssim_3d, cast_to_image
@@ -68,16 +67,6 @@ class BasicTrainer(Trainer):
         image = image.reshape(-1)
         image_pred = image_pred.reshape(-1)
         calc_mse_loss(loss, image, image_pred)
-        # image_pred = image_pred.reshape(10, -1)
-        ## TODO: HARD CODE  仅限batch size=1
-        # for i in range(data["rays"].shape[1]):
-        #    rays = data["rays"][0][i].reshape(-1, 8)
-        #    ret = render_dif(rays, image_pred[i], self.conf["render"]["n_samples"])
-        #    projs_pred = ret["acc"]
-
-        #    projs = data["projs"][0][i]
-        #    calc_mse_loss(loss, projs, projs_pred, 0.1)
-
         return loss["loss"]
 
     def eval_step(self, global_step, idx_epoch):
