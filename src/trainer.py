@@ -93,7 +93,8 @@ class Trainer:
         # Network，实例化网络
         network = get_network(cfg["network"]["net_type"])
         cfg["network"].pop("net_type", None)
-        if cfg["image_encoder"] == "dif":
+        image_encoder = cfg["network"].pop("image_encoder", None)
+        if image_encoder == "dif":
             # stx()
             self.dif_net = get_network("dif")(cfg["train"]["n_views"]).to(device)
             ckpt = torch.load("./best_dif.ckpt")
@@ -102,7 +103,7 @@ class Trainer:
             self.net = network(
                 image_encoder=self.dif_net.image_encoder, **cfg["network"]
             ).to(device)
-        elif cfg["image_encoder"] == "resnet50":
+        elif image_encoder == "resnet50":
             import torchvision
             from torchvision import models
 

@@ -33,6 +33,7 @@ network:
     #encoder:
     #  encoding: tensorf
     #  num_levels: 256
+  image_encoder: dif
 encoder:
   encoding: hashgrid
   #encoding: None
