@@ -159,6 +159,7 @@ class ImageNerfNetwork(nn.Module):
         self.bound = bound
 
         # Linear layers
+        self.feat_dim = feat_dim
         self.mlp = tcnn.Network(feat_dim, 1, mlp_config)
 
     def forward(self, x):
@@ -171,7 +172,8 @@ class ImageNerfNetwork(nn.Module):
         projs = x["projections"]  # B, M, C, W, H
         b, m, w, h = projs.shape
         projs = projs.reshape(b * m, 1, w, h)  # B', C, W, H
-        proj_feats = self.image_encoder(projs)
+        with torch.no_grad():
+            proj_feats = self.image_encoder(projs)
         proj_feats = list(proj_feats) if type(proj_feats) is tuple else [proj_feats]
         for i in range(len(proj_feats)):
             _, c_, w_, h_ = proj_feats[i].shape
@@ -191,6 +193,6 @@ class ImageNerfNetwork(nn.Module):
             p_feats = torch.cat(f_list, dim=1)
             p_list.append(p_feats)
         p_feats = torch.cat(p_list, dim=1)  # B, C, N, M
-        x = [self.mlp(p_feat) for p_feat in p_feats]
+        x = [self.mlp(p_feat.view(-1, self.feat_dim)) for p_feat in p_feats]
         x = torch.cat(x, dim=1)  # B, C, N, M
         return x
