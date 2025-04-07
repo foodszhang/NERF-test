@@ -43,53 +43,10 @@ class MLP(nn.Module):
         return self.layer(x)
 
 
-class MixNet(nn.Module):
-    def __init__(
-        self, dif_net, nerf_net, hidden_dim=256, num_layers=8, skips=[4], out_dim=1
-    ):
-        self.layers = nn.ModuleList(
-            [nn.Linear(2, hidden_dim)]
-            + [
-                (
-                    nn.Linear(hidden_dim, hidden_dim)
-                    if i not in skips
-                    else nn.Linear(hidden_dim + self.in_dim, hidden_dim)
-                )
-                for i in range(1, num_layers - 1, 1)
-            ]
-        )
-        self.layers.append(nn.Linear(hidden_dim, out_dim))
-        self.dif_net = dif_net
-        self.nerf_net = nerf_net
-
-        self.activations = nn.ModuleList(
-            [nn.LeakyReLU() for i in range(0, num_layers - 1, 1)]
-        )
-        self.activations.append(nn.LeakyReLU())
-
-    def forward(self, x):
-        x1 = self.dif_net(x)
-        x2 = self.nerf_net(x)
-        x = torch.cat([x1, x2], -1)
-        input_pts = x
-        for i in range(len(self.layers)):
-
-            linear = self.layers[i]
-            activation = self.activations[i]
-
-            if i in self.skips:
-                x = torch.cat([input_pts, x], -1)
-
-            x = linear(x)
-            x = activation(x)
-        return x
-
-
 class DIF_Net(nn.Module):
     def __init__(
         self,
         num_views,
-        combine,
         mid_ch=64,
         image_encoding="unet3",
         position_encoding="hashgrid",
@@ -102,23 +59,9 @@ class DIF_Net(nn.Module):
         else:
             self.image_encoding = "unet3"
             self.image_encoder = UNet3Plus(mid_ch, fast_up=False, use_cgm=False)
+        self.image_encoder.output_dim = mid_ch
         self.position_encoder = get_encoder(position_encoding)
-        # self.mlp = DensityNetwork_debug(mid_ch + 32)
-        # self.mlp = DensityNetwork_debug(mid_ch)
-        self.mlp = DensityNetwork_debug(mid_ch * num_views + 32)
-        # self.mlp = DensityNetwork_debug(mid_ch * num_views)
-        # self.mlp_pos = DensityNetwork_debug(32)
-        self.combine_arg = torch.nn.Parameter(torch.tensor(0.0))
-
-        if self.combine == "mlp":
-            self.view_mixer = MLP([num_views, num_views // 2, 1])
-
-        # self.point_classifier = SurfaceClassifier(
-        #    [mid_ch + 32, 256, 64, 16, 1], no_residual=False
-        # )
-        self.point_classifier = SurfaceClassifier(
-            [mid_ch, 256, 64, 16, 1], no_residual=False
-        )
+        self.mlp = DensityNetwork_debug(mid_ch * num_views)
         print(f"DIF_Net, mid_ch: {mid_ch}, combine: {self.combine}")
 
     def forward(self, data, eval_npoint=10240):
@@ -145,38 +88,20 @@ class DIF_Net(nn.Module):
         n_batch = int(np.ceil(total_npoint / eval_npoint))
 
         pred_list = []
-        p_feats_list = []
         for i in range(n_batch):
             left = i * eval_npoint
             right = min((i + 1) * eval_npoint, total_npoint)
-            if not self.training:
-                p_pred, p_feats = self.forward_points(
-                    proj_feats,
-                    {
-                        "proj_pts": data["proj_pts"][..., left:right, :],
-                        "pts": data["pts"][..., left:right, :],
-                    },
-                )  # B, C, N
-                p_feats = p_feats.detach()
-
-                pred_list.append(p_pred)
-                p_feats_list.append(p_feats)
-            else:
-                p_pred, _ = self.forward_points(
-                    proj_feats,
-                    {
-                        "proj_pts": data["proj_pts"][..., left:right, :],
-                        "pts": data["pts"][..., left:right, :],
-                    },
-                )
-                pred_list.append(p_pred)
+            p_pred = self.forward_points(
+                proj_feats,
+                {
+                    "proj_pts": data["proj_pts"][..., left:right, :],
+                    "pts": data["pts"][..., left:right, :],
+                },
+            )
+            pred_list.append(p_pred)
 
         pred = torch.cat(pred_list, dim=2)
-        if not self.training:
-            p_feats = torch.cat(p_feats_list, dim=2)
-        else:
-            p_feats = None
-        return pred, p_feats
+        return pred
 
     # points -> (10. 1024x10, 3)
     # proj -> (10, 1024x1, 2)
@@ -195,36 +120,101 @@ class DIF_Net(nn.Module):
                 f_list.append(p_feats)
             p_feats = torch.cat(f_list, dim=1)
             p_list.append(p_feats)
-        # p_feats = torch.stack(p_list, dim=-1)  # B, C, N, M
         p_feats = torch.cat(p_list, dim=1)  # B, C, N, M
 
-        # 2. cross-view fusion
-        # if self.combine == "max":
-        #    p_feats = F.max_pool2d(p_feats, (1, n_view))
-        #    p_feats = p_feats.squeeze(-1)  # B, C, N
-        # elif self.combine == "mlp":
-        #    p_feats = p_feats.permute(0, 3, 1, 2)
-        #    p_feats = self.view_mixer(p_feats)
-        #    p_feats = p_feats.squeeze(1)
-        # else:
-        #    raise NotImplementedError
-
-        # 3. point-wise classification
-        # p_feats B, 128 , N
-        q = self.position_encoder(data["pts"], 0.4)  # B, N, 32
-        q = q.permute(0, 2, 1)
-        # q = (q - q.min()) / (q.max() - q.min())
-        # p_feats = (p_feats - p_feats.min()) / (p_feats.max() - p_feats.min())
         proj_feats = p_feats
-        p_feats = torch.cat([p_feats, q], dim=1)
 
-        # p_pred = self.point_classifier(p_feats)
-        # print("123123123", p_feats.max(), p_feats.min())
         p_feats = p_feats.permute(0, 2, 1)
         p_pred = self.mlp(p_feats)
         p_pred = p_pred.permute(0, 2, 1)
-        # q_pred = self.mlp_pos(q)
-        # q_pred = q_pred.permute(0, 2, 1)
-        # pred = (1 - self.combine_arg) * p_pred + q_pred * self.combine_arg
-        # return p_pred, q_pred
-        return p_pred, proj_feats
+        return p_pred
+
+
+class ImageNerfNetwork(nn.Module):
+    def __init__(
+        self,
+        image_encoder,
+        bound=0.4,
+        num_layers=8,
+        feat_dim=640,
+        hidden_dim=256,
+        skips=[4],
+        out_dim=1,
+        last_activation="sigmoid",
+    ):
+        super().__init__()
+        self.nunm_layers = num_layers
+        self.hidden_dim = hidden_dim
+        self.skips = skips
+        self.image_encoder = image_encoder
+        self.in_dim = feat_dim
+        self.bound = bound
+
+        # Linear layers
+        self.layers = nn.ModuleList(
+            [nn.Linear(self.in_dim, hidden_dim)]
+            + [
+                (
+                    nn.Linear(hidden_dim, hidden_dim)
+                    if i not in skips
+                    else nn.Linear(hidden_dim + self.in_dim, hidden_dim)
+                )
+                for i in range(1, num_layers - 1, 1)
+            ]
+        )
+        self.layers.append(nn.Linear(hidden_dim, out_dim))
+
+        # Activations
+        self.activations = nn.ModuleList(
+            [nn.LeakyReLU() for i in range(0, num_layers - 1, 1)]
+        )
+        if last_activation == "sigmoid":
+            self.activations.append(nn.Sigmoid())
+        elif last_activation == "relu":
+            self.activations.append(nn.LeakyReLU())
+        else:
+            raise NotImplementedError("Unknown last activation")
+
+    def forward(self, x):
+        # stx()
+        """
+        input: (N_rays x N_samples, 3)
+        经过encoder后变成: (N_rays x N_samples, 32)
+        """
+        pts = x["pts"]
+        projs = x["projections"]  # B, M, C, W, H
+        b, m, w, h = projs.shape
+        proj_feats = self.image_encoder(projs)
+        for i in range(len(proj_feats)):
+            _, c_, w_, h_ = proj_feats[i].shape
+            proj_feats[i] = proj_feats[i].reshape(b, m, c_, w_, h_)  # B, M, C, W, H
+        n_view = proj_feats[0].shape[1]
+
+        # 1. query view-specific features
+        p_list = []
+        for i in range(n_view):
+            f_list = []
+            for proj_f in proj_feats:
+                feat = proj_f[:, i, ...]  # B, C, W, H
+
+                p = x["proj_pts"][:, i, ...]  # B, N, 2
+                p_feats = index_2d(feat, p)  # B, C, N
+                f_list.append(p_feats)
+            p_feats = torch.cat(f_list, dim=1)
+            p_list.append(p_feats)
+        p_feats = torch.cat(p_list, dim=1)  # B, C, N, M
+        input_pts = p_feats[..., : self.in_dim]  # 就是x
+        x = input_pts
+
+        for i in range(len(self.layers)):
+
+            linear = self.layers[i]
+            activation = self.activations[i]
+
+            if i in self.skips:
+                x = torch.cat([input_pts, x], -1)
+
+            x = linear(x)
+            x = activation(x)
+
+        return x

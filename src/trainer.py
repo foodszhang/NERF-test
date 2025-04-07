@@ -102,6 +102,7 @@ class Trainer:
         ckpt = torch.load("./best_dif.ckpt")
         self.dif_net.load_state_dict(ckpt["network"])
         self.dif_net.eval()
+        self.image_encoder = self.dif_net.image_encoder
         self.train_dset = train_dataset
         grad_vars = list(self.net.parameters())
         ####TODO:

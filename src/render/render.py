@@ -36,6 +36,38 @@ def get_pts(rays, n_samples, perturb=None):
     return pts, z_vals, rays_o, rays_d
 
 
+def render_with_image_encoder(rays, projs, net, dataset, n_samples):
+    pts, z_vals, rays_o, rays_d = get_pts(rays, n_samples, True)
+    bound = 0.3
+    pts = pts.clamp(-bound, bound)
+    n_rays = rays.shape[0]
+    pts = pts.reshape(-1, 3)
+    q = coord_to_dif_base(pts)
+    cl = []
+    for other_proj_num in range(dataset.n_views):
+        coords = dataset.geo.project(q, dataset.angles[other_proj_num])
+        coords = torch.tensor(coords, dtype=torch.float32, device=dataset.device)
+        cl.append(coords)
+    coords = torch.stack(cl, dim=0)
+    pts = pts.reshape(1, *pts.shape)
+    coords = coords.reshape(1, *coords.shape)
+    proj_pt = coords
+
+    raw = run_dif_network(
+        pts,
+        projs,
+        proj_pt,
+        net,
+    )  # run_network 输出衰减系数μ
+    raw = raw.reshape(n_rays, -1, 1)
+    acc, weights = raw2outputs(raw, z_vals, rays_d)  # acc 和 weights 各自的含义是？
+    ret = {"acc": acc, "pts": pts, "raw": raw, "weights": weights}
+    for k in ret:
+        if torch.isnan(ret[k]).any() or torch.isinf(ret[k]).any():
+            print(f"! [Numerical Error] {k} contains nan or inf.")
+    return ret
+
+
 def render_dif(rays, projs, net, dif_net, dataset, n_samples):
     pts, z_vals, rays_o, rays_d = get_pts(rays, n_samples, True)
     bound = 0.3
@@ -58,7 +90,7 @@ def render_dif(rays, projs, net, dif_net, dataset, n_samples):
         pts,
         projs,
         proj_pt,
-        dif_net,
+        image_encoder,
     )  # run_network 输出衰减系数μ
     raw = raw.reshape(n_rays, -1, 1)
     acc, weights = raw2outputs(raw, z_vals, rays_d)  # acc 和 weights 各自的含义是？

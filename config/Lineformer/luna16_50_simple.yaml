@@ -21,7 +21,7 @@ exp:
   #heads: 8
   #num_blocks: 1
 network:
-  net_type: mlp
+  net_type: ImageNerf
   num_layers: 4
   hidden_dim: 128
   skips: [4]
