@@ -170,7 +170,9 @@ class ImageNerfNetwork(nn.Module):
         pts = x["pts"]
         projs = x["projections"]  # B, M, C, W, H
         b, m, w, h = projs.shape
+        projs = projs.reshape(b * m, 1, w, h)  # B', C, W, H
         proj_feats = self.image_encoder(projs)
+        proj_feats = list(proj_feats) if type(proj_feats) is tuple else [proj_feats]
         for i in range(len(proj_feats)):
             _, c_, w_, h_ = proj_feats[i].shape
             proj_feats[i] = proj_feats[i].reshape(b, m, c_, w_, h_)  # B, M, C, W, H
@@ -189,5 +191,6 @@ class ImageNerfNetwork(nn.Module):
             p_feats = torch.cat(f_list, dim=1)
             p_list.append(p_feats)
         p_feats = torch.cat(p_list, dim=1)  # B, C, N, M
-        x = self.mlp(p_feats)
+        x = [self.mlp(p_feat) for p_feat in p_feats]
+        x = torch.cat(x, dim=1)  # B, C, N, M
         return x
