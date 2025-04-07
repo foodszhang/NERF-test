@@ -30,7 +30,12 @@ print("!!!!!!", torch.cuda.is_available())
 # os.environ["CUDA_HOME"]='C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.3'
 
 from src.config.configloading import load_config
-from src.render import render, run_network, render_dif, run_network_with_dif
+from src.render import (
+    render,
+    run_network,
+    render_with_image_encoder,
+    run_network_with_dif,
+)
 from src.trainer import Trainer
 from src.loss import calc_mse_loss, calc_tv_loss, compute_tv_norm
 from src.utils import get_psnr, get_ssim, get_psnr_3d, get_ssim_3d, cast_to_image
@@ -64,11 +69,10 @@ class BasicTrainer(Trainer):
             -1
         )  # projection 的 ground truth [1, 1024] -> [1024]
         # ret = render(rays, self.net, self.net_fine, **self.conf["render"])
-        ret = render_dif(
+        ret = render_with_image_encoder(
             rays,
             data["projs"],
             self.net,
-            self.dif_net,
             self.train_dset,
             self.conf["render"]["n_samples"],
         )

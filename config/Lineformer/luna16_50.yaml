@@ -71,6 +71,7 @@ render:
   perturb: True
   raw_noise_std: 0.
   netchunk: 409600  # batchsize of points
+image_encoder: dif
 train:
   epoch: 1000
   n_batch: 1
@@ -84,7 +85,7 @@ train:
   resume: False
   window_size: [8, 8]
   window_num: 16
-  n_views: 3
+  n_views: 10
   n_feat: 640 # 10 * 64
 log:
   i_eval: 10  # Epoch for evaluation

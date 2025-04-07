@@ -71,7 +71,6 @@ class DIF_Net(nn.Module):
         self.image_encoder.output_dim = mid_ch
         self.position_encoder = get_encoder(position_encoding)
         self.mlp = DensityNetwork_debug(mid_ch * num_views)
-        print(f"DIF_Net, mid_ch: {mid_ch}, combine: {self.combine}")
 
     def forward(self, data, eval_npoint=10240):
         # projection encoding

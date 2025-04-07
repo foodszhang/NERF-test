@@ -63,7 +63,7 @@ class BasicTrainer(Trainer):
         # stx()
         loss = {"loss": 0.0}
         # stx()
-        image_pred, _ = self.net(data)
+        image_pred = self.net(data)
         image = data["image"]
         image = image.reshape(-1)
         image_pred = image_pred.reshape(-1)
@@ -93,7 +93,7 @@ class BasicTrainer(Trainer):
         }
         for index, data in enumerate(self.eval_dset):
             # stx()
-            image_pred, _ = self.net(data)
+            image_pred = self.net(data)
             image = data["image"]
             image = image.reshape(256, 256, 256)
             image_pred = image_pred.reshape(256, 256, 256)
