@@ -32,6 +32,7 @@ print("!!!!!!", torch.cuda.is_available())
 from src.config.configloading import load_config
 from src.render import (
     render_with_image_encoder,
+    run_imagenerf_network,
 )
 from src.trainer import Trainer
 from src.loss import calc_mse_loss, calc_tv_loss, compute_tv_norm
