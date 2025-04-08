@@ -22,18 +22,22 @@ exp:
   #dim_head: 4
   #heads: 8
   #num_blocks: 1
+#network:
+#  net_type: ImageNerf
+#  net_type: Nerf
+#  num_layers: 4
+#  hidden_dim: 128
+#  skips: [4]
+#  out_dim: 1
+#  last_activation: relu
+#  bound: 0.3
+#    #encoder:
+#    #  encoding: tensorf
+#    #  num_levels: 256
+#  image_encoder: dif
 network:
-  net_type: ImageNerf
-  num_layers: 4
-  hidden_dim: 128
-  skips: [4]
-  out_dim: 1
-  last_activation: relu
-  bound: 0.3
-    #encoder:
-    #  encoding: tensorf
-    #  num_levels: 256
-  image_encoder: dif
+  #net_type: ImageNerf
+  net_type: Nerf
 encoder:
   encoding: hashgrid
   #encoding: None

@@ -138,6 +138,40 @@ class DIF_Net(nn.Module):
         return p_pred
 
 
+class NerfNetwork(nn.Module):
+    def __init__(
+        self,
+    ):
+        super().__init__()
+        encoding_config = {
+            "otype": "Grid",
+            "type": "Hash",
+            "n_levels": 16,
+            "n_features_per_level": 2,
+            "log2_hashmap_size": 19,
+            "base_resolution": 16,
+            "per_level_scale": 2.0,
+            "interpolation": "Linear",
+        }
+        self.encoding = tcnn.Encoding(3, encoding_config)
+        self.mlp = tcnn.Network(
+            encoding_config["n_levels"] * encoding_config["n_features_per_level"],
+            1,
+            mlp_config,
+        )
+
+    def forward(self, x):
+        # stx()
+        """
+        input: (N_rays x N_samples, 3)
+        经过encoder后变成: (N_rays x N_samples, 32)
+        """
+        pts = x["pts"]
+        x = self.encoding(pts)
+        x = self.mlp(x)
+        return x
+
+
 class ImageNerfNetwork(nn.Module):
     def __init__(
         self,

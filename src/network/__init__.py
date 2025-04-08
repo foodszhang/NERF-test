@@ -1,6 +1,6 @@
 from .network import DensityNetwork
 from .Lineformer import Lineformer
-from .mix import DIF_Net, ImageNerfNetwork
+from .mix import DIF_Net, ImageNerfNetwork, NerfNetwork
 
 
 def get_network(type):
@@ -12,5 +12,7 @@ def get_network(type):
         return DIF_Net
     elif type == "ImageNerf":
         return ImageNerfNetwork
+    elif type == "Nerf":
+        return NerfNetwork
     else:
         raise NotImplementedError("Unknown network type!")
