@@ -154,11 +154,12 @@ class NerfNetwork(nn.Module):
             "interpolation": "Linear",
         }
         self.encoding = tcnn.Encoding(3, encoding_config)
-        self.mlp = tcnn.Network(
-            encoding_config["n_levels"] * encoding_config["n_features_per_level"],
-            1,
-            mlp_config,
-        )
+        # self.mlp = tcnn.Network(
+        #    encoding_config["n_levels"] * encoding_config["n_features_per_level"],
+        #    1,
+        #    mlp_config,
+        # )
+        self.mlp = DensityNetwork_debug(32)
 
     def forward(self, x):
         # stx()
@@ -197,8 +198,8 @@ class ImageNerfNetwork(nn.Module):
 
         # Linear layers
         self.feat_dim = feat_dim
-        # self.mlp = tcnn.Network(feat_dim, 1, mlp_config)
-        self.mlp = DensityNetwork_debug(mid_ch * num_views)
+        self.mlp = tcnn.Network(feat_dim, 1, mlp_config)
+        # self.mlp = DensityNetwork_debug(mid_ch * num_views)
 
     def forward(self, x):
         # stx()
