@@ -167,8 +167,11 @@ class NerfNetwork(nn.Module):
         经过encoder后变成: (N_rays x N_samples, 32)
         """
         pts = x["pts"]
+        b, n, c = pts.shape
+        pts = pts.reshape(-1, c)
         x = self.encoding(pts)
         x = self.mlp(x)
+        x = x.reshape(b, -1, 1)
         return x
 
 
@@ -194,7 +197,8 @@ class ImageNerfNetwork(nn.Module):
 
         # Linear layers
         self.feat_dim = feat_dim
-        self.mlp = tcnn.Network(feat_dim, 1, mlp_config)
+        # self.mlp = tcnn.Network(feat_dim, 1, mlp_config)
+        self.mlp = DensityNetwork_debug(mid_ch * num_views)
 
     def forward(self, x):
         # stx()
