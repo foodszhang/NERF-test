@@ -171,6 +171,7 @@ class NerfNetwork(nn.Module):
         b, n, c = pts.shape
         pts = pts.reshape(-1, c)
         x = self.encoding(pts)
+        x = x.float()
         x = self.mlp(x)
         x = x.reshape(b, -1, 1)
         return x
