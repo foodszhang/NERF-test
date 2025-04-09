@@ -78,7 +78,7 @@ class DIF_Net(nn.Module):
         projs = data["projections"]  # B, M, C, W, H
         b, m, w, h = projs.shape
         projs = projs.reshape(b * m, 1, w, h)  # B', C, W, H
-        if self.training:
+        if not self.training:
             if self.image_encoding == "unet3":
                 proj_feats = self.image_encoder(projs)["final_pred"]
             else:
@@ -209,7 +209,7 @@ class ImageNerfNetwork(nn.Module):
         b, m, w, h = projs.shape
         projs = projs.reshape(b * m, 1, w, h)  # B', C, W, H
         with torch.no_grad():
-            proj_feats = self.image_encoder(projs)
+            proj_feats = self.image_encoder(projs)["final_pred"]
         proj_feats = list(proj_feats) if type(proj_feats) is tuple else [proj_feats]
         for i in range(len(proj_feats)):
             _, c_, w_, h_ = proj_feats[i].shape
@@ -232,8 +232,8 @@ class ImageNerfNetwork(nn.Module):
         pts = pts.reshape(-1, c)
         pos_feat = self.encoding(pts)
         pos_feat = pos_feat.float()
-        pos_feat = pos_feat.view(b, n, -1)
-        p_feats = torch.cat([pos_feat, p_feats], dim=2)
-        x = [self.mlp(p_feat.view(-1, self.feat_dim)) for p_feat in p_feats]
+        pos_feat = pos_feat.view(b, -1, n)
+        p_feats = torch.cat([pos_feat, p_feats], dim=1)
+        x = [self.mlp(p_feat.view(-1, self.feat_dim + 32)) for p_feat in p_feats]
         x = torch.cat(x, dim=1)  # B, C, N, M
         return x.view(b, -1)
