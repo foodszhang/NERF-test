@@ -113,6 +113,7 @@ class BasicTrainer(Trainer):
         # pts = self.eval_dset.voxels.reshape(-1, 3)
         # q = coord_to_dif_base(pts)
         pts = self.eval_dset.points
+        rays = self.eval_dset.rays.reshape(-1, 8)  # [65536,8]  -> [3276800, 8]
         q = pts
         cl = []
         for other_proj_num in range(self.eval_dset.n_views):
@@ -129,6 +130,7 @@ class BasicTrainer(Trainer):
         pts = pts.reshape(1, *pts.shape)
         coords = coords.reshape(1, *coords.shape)
         projs = self.eval_dset.projs.reshape(-1, *self.eval_dset.projs.shape)
+        N, H, W = self.eval_dset.projs.shape
         pts = coord_to_sax(pts)
         raw = run_imagenerf_network(
             pts,
@@ -140,12 +142,6 @@ class BasicTrainer(Trainer):
         image = image.reshape(256, 256, 256)
         image_pred = raw.reshape(256, 256, 256)
         # stx()
-        loss = {
-            # "proj_psnr": get_psnr(projs_pred, projs),
-            # "proj_ssim": get_ssim(projs_pred, projs),
-            "psnr_3d": get_psnr_3d(image_pred, image),
-            "ssim_3d": get_ssim_3d(image_pred, image),
-        }
 
         show_slice = 5
         show_step = image.shape[-1] // show_slice
@@ -159,6 +155,28 @@ class BasicTrainer(Trainer):
                 )
             )
         show_density = torch.concat(show, dim=1)
+        projs_pred = []
+        for i in tqdm(
+            range(0, rays.shape[0], self.n_rays)
+        ):  # 每一簇射线是 n_rays ，每隔这么多射线渲染一次
+            projs_pred.append(
+                render_with_image_encoder(
+                    rays[i : i + self.n_rays],
+                    projs,
+                    self.net,
+                    self.train_dset,
+                    self.conf["render"]["n_samples"],
+                )["acc"]
+            )
+        projs_pred = torch.cat(projs_pred, 0).reshape(N, H, W)
+
+        projs = self.eval_dset.projs
+        loss = {
+            "proj_psnr": get_psnr(projs_pred, projs),
+            "proj_ssim": get_ssim(projs_pred, projs),
+            "psnr_3d": get_psnr_3d(image_pred, image),
+            "ssim_3d": get_ssim_3d(image_pred, image),
+        }
 
         # cast_to_image -> 转成 numpy并多加一个维度
         # self.writer.add_image(
@@ -177,30 +195,30 @@ class BasicTrainer(Trainer):
         os.makedirs(proj_gt_origin_dir, exist_ok=True)
         os.makedirs(proj_pred_dir, exist_ok=True)
         os.makedirs(proj_gt_dir, exist_ok=True)
-        # for i in tqdm(range(N)):
-        #    """
-        #    cast_to_image 自带了归一化, 1 - 放在外边
-        #    """
-        #    iio.imwrite(
-        #        osp.join(proj_pred_origin_dir, f"proj_pred_{str(i)}.png"),
-        #        (cast_to_image(projs_pred[i]) * 255).astype(np.uint8),
-        #    )
-        #    iio.imwrite(
-        #        osp.join(proj_gt_origin_dir, f"proj_gt_{str(i)}.png"),
-        #        (cast_to_image(projs[i]) * 255).astype(np.uint8),
-        #    )
-        #    iio.imwrite(
-        #        osp.join(proj_pred_dir, f"proj_pred_{str(i)}.png"),
-        #        ((1 - cast_to_image(projs_pred[i])) * 255).astype(np.uint8),
-        #    )
-        #    iio.imwrite(
-        #        osp.join(proj_gt_dir, f"proj_gt_{str(i)}.png"),
-        #        ((1 - cast_to_image(1 - projs[i])) * 255).astype(np.uint8),
-        #    )
+        for i in tqdm(range(N)):
+            """
+            cast_to_image 自带了归一化, 1 - 放在外边
+            """
+            iio.imwrite(
+                osp.join(proj_pred_origin_dir, f"proj_pred_{str(i)}.png"),
+                (cast_to_image(projs_pred[i]) * 255).astype(np.uint8),
+            )
+            iio.imwrite(
+                osp.join(proj_gt_origin_dir, f"proj_gt_{str(i)}.png"),
+                (cast_to_image(projs[i]) * 255).astype(np.uint8),
+            )
+            iio.imwrite(
+                osp.join(proj_pred_dir, f"proj_pred_{str(i)}.png"),
+                ((1 - cast_to_image(projs_pred[i])) * 255).astype(np.uint8),
+            )
+            iio.imwrite(
+                osp.join(proj_gt_dir, f"proj_gt_{str(i)}.png"),
+                ((1 - cast_to_image(1 - projs[i])) * 255).astype(np.uint8),
+            )
 
         ## stx()
-        # for ls in loss.keys():
-        #    self.writer.add_scalar(f"eval/{ls}", loss[ls], global_step)
+        for ls in loss.keys():
+            self.writer.add_scalar(f"eval/{ls}", loss[ls], global_step)
 
         # Save
         # 保存各种视图

@@ -42,28 +42,29 @@ def render_with_image_encoder(rays, projs, net, dataset, n_samples):
     pts = pts.clamp(-bound, bound)
     n_rays = rays.shape[0]
     pts = pts.reshape(-1, 3)
-    q = coord_to_dif_base(pts)
-    cl = []
-    for other_proj_num in range(dataset.n_views):
-        coords = dataset.geo.project(q, dataset.angles[other_proj_num])
-        coords = torch.tensor(coords, dtype=torch.float32, device=dataset.device)
-        cl.append(coords)
-    coords = torch.stack(cl, dim=0)
+    # q = coord_to_dif_base(pts)
+    # cl = []
+    # for other_proj_num in range(dataset.n_views):
+    #    coords = dataset.geo.project(q, dataset.angles[other_proj_num])
+    #    coords = torch.tensor(coords, dtype=torch.float32, device=dataset.device)
+    #    cl.append(coords)
+    # coords = torch.stack(cl, dim=0)
     pts = pts.reshape(1, *pts.shape)
-    coords = coords.reshape(1, *coords.shape)
-    proj_pt = coords
+    # coords = coords.reshape(1, *coords.shape)
+    # proj_pt = coords
 
     raw = run_imagenerf_network(
         pts,
         projs,
-        proj_pt,
+        # proj_pt,
+        [],
         net,
     )  # run_network 输出衰减系数μ
     raw = raw.reshape(n_rays, -1, 1)
     acc, weights = raw2outputs(raw, z_vals, rays_d)  # acc 和 weights 各自的含义是？
     ret = {"acc": acc, "pts": pts, "raw": raw, "weights": weights}
     for k in ret:
-        if torch.isnan(ret[k]).any() or torch.isinf(ret[k]).any():
+        if (torch.isnan(ret[k]).any() or torch.isinf(ret[k]).any()) and k != "weights":
             print(f"! [Numerical Error] {k} contains nan or inf.")
     return ret
 
@@ -115,8 +116,8 @@ def run_imagenerf_network(pts, projs, proj_pts, imagenerf_net, netchunk=10240):
         nerf_out = imagenerf_net(
             {
                 "pts": pts[..., left:right, :],
-                "projections": projs,
-                "proj_pts": proj_pts[..., left:right, :],
+                # "projections": projs,
+                # "proj_pts": proj_pts[..., left:right, :],
             }
         )
         nerf_list.append(nerf_out)
@@ -162,6 +163,7 @@ def raw2outputs(raw, z_vals, rays_d, raw_noise_std=0.0):
         # raw[:, 1:, -1] 和 raw[:, :-1, -1] 的 shape 都是 [1024, 191], 做成μ的差值, [μ_0, μ_1 - μ_2, ..., μ_N-1 - μ_N]
         # 权重大的地方表示此处的μ值变化大，需要更加精细采样
         weights = torch.cat([eps, torch.abs(raw[:, 1:, -1] - raw[:, :-1, -1])], dim=-1)
+
         weights = weights / torch.max(
             weights
         )  # 以差值为权重来进行 pdf_sample，后续的 fine 采样

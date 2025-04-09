@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+
 import tinycudann as tcnn
 
 from .unet import UNet
@@ -17,7 +18,7 @@ def coord_to_dif(points):
 
 mlp_config = {
     "otype": "CutlassMLP",
-    "activation": "ReLU",
+    "activation": "LeakyReLU",
     "output_activation": "Softplus",
     "n_neurons": 128,
     "n_hidden_layers": 5,
@@ -150,16 +151,17 @@ class NerfNetwork(nn.Module):
             "n_features_per_level": 2,
             "log2_hashmap_size": 19,
             "base_resolution": 16,
-            "per_level_scale": 2.0,
+            "per_level_scale": 1.0,
             "interpolation": "Linear",
         }
-        self.encoding = tcnn.Encoding(3, encoding_config)
-        # self.mlp = tcnn.Network(
-        #    encoding_config["n_levels"] * encoding_config["n_features_per_level"],
-        #    1,
-        #    mlp_config,
-        # )
-        self.mlp = DensityNetwork_debug(32)
+        # self.encoding = tcnn.Encoding(3, encoding_config)
+        self.mlp = tcnn.Network(
+            encoding_config["n_levels"] * encoding_config["n_features_per_level"],
+            1,
+            mlp_config,
+        )
+        self.encoding = get_encoder("hashgrid")
+        #self.mlp = DensityNetwork_debug(32)
 
     def forward(self, x):
         # stx()

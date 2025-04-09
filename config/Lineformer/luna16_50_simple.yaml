@@ -64,7 +64,7 @@ render:
   raw_noise_std: 0.
   netchunk: 409600  # batchsize of points
 train:
-  epoch: 1000
+  epoch: 500
   n_batch: 1
   n_rays: 1024
   lrate: 0.0001
@@ -77,5 +77,5 @@ train:
   n_views: 10
   n_feat: 640 # 10 * 64
 log:
-  i_eval: 50  # Epoch for evaluation
+  i_eval: 100  # Epoch for evaluation
   i_save: 100  # Epoch for saving

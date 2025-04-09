@@ -26,7 +26,7 @@ def one_cycle(y1=0.0, y2=1.0, steps=100):
 
 
 def fmt_loss_str_eval(losses):
-    return "".join(", " + k + ": " + f"{losses[k]:.4g}" for k in losses)
+    return "".join(", " + k + ": " + f"{losses[k]}" for k in losses)
 
 
 def fmt_loss_str(losses):
@@ -150,12 +150,14 @@ class Trainer:
             grad_vars += list(self.net_fine.parameters())
 
         # Optimizer，优化器及LR策略
-        # optimizer = torch.optim.Adam(model.parameters(), lr=opt.learning_rate, betas=(0.9, 0.999))
+        self.optimizer = torch.optim.Adam(
+            params=grad_vars, lr=cfg["train"]["lrate"], betas=(0.9, 0.999)
+        )
         """
             optimizer 更新权重 weights, 用的是 optimizer.step()
             scheduler 更新学习率 lr, 用的是 scheduler.step()
         """
-        self.optimizer = torch.optim.AdamW(grad_vars, lr=cfg["train"]["lrate"])
+        # self.optimizer = torch.optim.AdamW(grad_vars, lr=cfg["train"]["lrate"])
         # self.lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
         #     optimizer=self.optimizer, gamma=cfg["train"]["lrate_gamma"])
         # self.lr_scheduler = torch.optim.lr_scheduler.StepLR(

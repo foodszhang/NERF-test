@@ -48,14 +48,14 @@ def save_nifti(image, path):
 
 def main():
     # matPath = f"./dataGenerator/{dataFolder}/{dataType}/img.mat"
-    data_dir = "/data/subset0"
+    data_dir = "/home/foods/data/subset0"
     configPath = f"./config.yml"
     out_dir = "./data/luna16"
     infoPath = osp.join(out_dir, "info.json")
     info = json.load(open(infoPath, "r"))
     all_names = info["train"] + info["eval"] + info["test"]
     for name in all_names:
-        generator(name, data_dir, configPath, out_dir, show=False)
+        generator(name, data_dir, configPath, out_dir, show=True)
     os.makedirs(f"{out_dir}/blocks/", exist_ok=True)
 
     block_list = generate_blocks()
@@ -220,7 +220,8 @@ def generator(name, data_dir, configPath, result_dir, show=False):
         matPath,
         data["nVoxel"],
     )
-    window = (-800, 1000)
+    # window = (-800, 1000)
+    window = (-400, 500)
     img = convert_to_attenuation(img, data["rescale_slope"], data["rescale_intercept"])
     window = (
         convert_to_attenuation(
