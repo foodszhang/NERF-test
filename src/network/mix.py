@@ -161,7 +161,7 @@ class NerfNetwork(nn.Module):
             mlp_config,
         )
         self.encoding = get_encoder("hashgrid")
-        #self.mlp = DensityNetwork_debug(32)
+        # self.mlp = DensityNetwork_debug(32)
 
     def forward(self, x):
         # stx()
@@ -214,8 +214,7 @@ class ImageNerfNetwork(nn.Module):
         projs = x["projections"]  # B, M, C, W, H
         b, m, w, h = projs.shape
         projs = projs.reshape(b * m, 1, w, h)  # B', C, W, H
-        with torch.no_grad():
-            proj_feats = self.image_encoder(projs)
+        proj_feats = self.image_encoder(projs)
         proj_feats = list(proj_feats) if type(proj_feats) is tuple else [proj_feats]
         for i in range(len(proj_feats)):
             _, c_, w_, h_ = proj_feats[i].shape

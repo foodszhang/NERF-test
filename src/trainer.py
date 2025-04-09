@@ -104,18 +104,13 @@ class Trainer:
                 image_encoder=self.dif_net.image_encoder, **cfg["network"]
             ).to(device)
         elif image_encoder == "resnet50":
-            import torchvision
-            from torchvision import models
-
-            resnet50 = models.resnet50(pretrained=True)
-            resnet50.eval()
-            resnet50.conv1 = torch.nn.Conv2d(
-                1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False
+            feature_dim = 64
+            image_encoder = torch.nn.Sequential(
+                torch.nn.Conv2d(1, 48, 3, stride=1, padding=1),
+                torch.nn.ReLU(inplace=True),
+                torch.nn.Conv2d(48, feature_dim, 3, padding=1),
             )
-            num_features = resnet50.fc.in_features
-            resnet50.avgpool = torch.nn.Identity()
-            resnet50.fc = torch.nn.Identity()
-            self.net = network(image_encoder=resnet50, **cfg["network"]).to(device)
+            self.net = network(image_encoder=image_encoder, **cfg["network"]).to(device)
         #
         # self.net = network().to(device)
         self.train_dset = train_dataset
