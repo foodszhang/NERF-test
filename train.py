@@ -88,30 +88,6 @@ class BasicTrainer(Trainer):
         """
         Evaluation step
         """
-        # Evaluate projection    渲染投射的 RGB 图
-        # stx()
-        # projs = self.eval_dset.projs  # [256, 256] -> [50, 256, 256]
-        # N, H, W = projs.shape
-        # rays = self.eval_dset.rays.reshape(-1, 8)  # [65536,8]  -> [3276800, 8]
-        # projs = self.eval_dset.projs.reshape(1, N, H, W)
-        # projs_pred = []
-        # for i in tqdm(
-        #    range(0, rays.shape[0], self.n_rays)
-        # ):  # 每一簇射线是 n_rays ，每隔这么多射线渲染一次
-        #    ret = render_dif(
-        #        rays[i : i + self.n_rays],
-        #        projs,
-        #        self.net,
-        #        self.dif_net,
-        #        self.eval_dset,
-        #        self.conf["render"]["n_samples"],
-        #    )
-        #    projs_pred.append(ret)
-        # projs_pred = torch.cat(projs_pred, 0).reshape(N, H, W)
-
-        # Evaluate density      渲染3D图像
-        # pts = self.eval_dset.voxels.reshape(-1, 3)
-        # q = coord_to_dif_base(pts)
         pts = self.eval_dset.points
         rays = self.eval_dset.rays.reshape(-1, 8)  # [65536,8]  -> [3276800, 8]
         q = pts

@@ -93,31 +93,32 @@ class Trainer:
         # Network，实例化网络
         network = get_network(cfg["network"]["net_type"])
         cfg["network"].pop("net_type", None)
-        # image_encoder = cfg["network"].pop("image_encoder", None)
-        # if image_encoder == "dif":
-        #    # stx()
-        #    self.dif_net = get_network("dif")(cfg["train"]["n_views"]).to(device)
-        #    ckpt = torch.load("./best_dif.ckpt")
-        #    self.dif_net.load_state_dict(ckpt["network"])
-        #    self.dif_net.eval()
-        #    self.net = network(
-        #        image_encoder=self.dif_net.image_encoder, **cfg["network"]
-        #    ).to(device)
-        # elif image_encoder == "resnet50":
-        #    import torchvision
-        #    from torchvision import models
+        image_encoder = cfg["network"].pop("image_encoder", None)
+        if image_encoder == "dif":
+            # stx()
+            self.dif_net = get_network("dif")(cfg["train"]["n_views"]).to(device)
+            ckpt = torch.load("./best_dif.ckpt")
+            self.dif_net.load_state_dict(ckpt["network"])
+            self.dif_net.eval()
+            self.net = network(
+                image_encoder=self.dif_net.image_encoder, **cfg["network"]
+            ).to(device)
+        elif image_encoder == "resnet50":
+            import torchvision
+            from torchvision import models
 
-        #    resnet50 = models.resnet50(pretrained=True)
-        #    resnet50.eval()
-        #    resnet50.conv1 = torch.nn.Conv2d(
-        #        1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False
-        #    )
-        #    num_features = resnet50.fc.in_features
-        #    resnet50.fc = torch.nn.Linear(num_features, 64)
+            resnet50 = models.resnet50(pretrained=True)
+            resnet50.eval()
+            resnet50.conv1 = torch.nn.Conv2d(
+                1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False
+            )
+            num_features = resnet50.fc.in_features
+            resnet50.fc = torch.nn.Linear(num_features, 64)
 
-        #    self.net = network(image_encoder=resnet50, **cfg["network"]).to(device)
-        self.net = network().to(device)
-        self.train_dset = train_dataset
+            self.net = network(image_encoder=resnet50, **cfg["network"]).to(device)
+        #
+        # self.net = network().to(device)
+        # self.train_dset = train_dataset
 
         grad_vars = list(self.net.parameters())
         ####TODO:

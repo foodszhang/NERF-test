@@ -36,8 +36,8 @@ exp:
 #    #  num_levels: 256
 #  image_encoder: dif
 network:
-  #net_type: ImageNerf
-  net_type: Nerf
+  net_type: ImageNerf
+  #net_type: Nerf
 encoder:
   encoding: hashgrid
   #encoding: None
@@ -58,7 +58,7 @@ encoder:
   #encoding: sphere_harmonics
   #encoding: tiledgrid
 render:
-  n_samples: 512
+  n_samples: 320
   n_fine: 0         
   perturb: True
   raw_noise_std: 0.
@@ -77,5 +77,5 @@ train:
   n_views: 10
   n_feat: 640 # 10 * 64
 log:
-  i_eval: 100  # Epoch for evaluation
+  i_eval: 50  # Epoch for evaluation
   i_save: 100  # Epoch for saving
