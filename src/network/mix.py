@@ -177,7 +177,6 @@ class NerfNetwork(nn.Module):
 class ImageNerfNetwork(nn.Module):
     def __init__(
         self,
-        image_encoder,
         bound=0.4,
         num_layers=8,
         feat_dim=10 * 8,
@@ -188,7 +187,6 @@ class ImageNerfNetwork(nn.Module):
         self.nunm_layers = num_layers
         self.hidden_dim = hidden_dim
         self.skips = skips
-        self.image_encoder = image_encoder
         self.in_dim = feat_dim
         self.bound = bound
         self.encoding = get_encoder("hashgrid")
@@ -208,12 +206,7 @@ class ImageNerfNetwork(nn.Module):
         projs = x["projections"]  # B, M, C, W, H
         b, m, w, h = projs.shape
         projs = projs.reshape(b * m, 1, w, h)  # B', C, W, H
-        with torch.no_grad():
-        if self.training:
-            proj_feats = self.image_encoder(projs)["final_pred"]
-        else:
-            proj_feats = self.image_encoder(projs)
-
+        proj_feats = x["proj_feats"]
         proj_feats = list(proj_feats) if type(proj_feats) is tuple else [proj_feats]
         for i in range(len(proj_feats)):
             _, c_, w_, h_ = proj_feats[i].shape

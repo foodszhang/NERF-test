@@ -228,7 +228,12 @@ class NerfDataset(Dataset):
                 index, select_coords[:, 0], select_coords[:, 1]
             ]  # self.rays: [50, 256, 256, 6], index 决定了取哪一个角度或样例，后两项决定了横纵坐标
             projs = self.projs[index, select_coords[:, 0], select_coords[:, 1]]  #
-            out = {"projs": self.projs, "rays": rays, "projs_pts": projs}
+            out = {
+                "projs": self.projs,
+                "rays": rays,
+                "projs_pts": projs,
+                "projs_feats": self.proj_feats,
+            }
             return out
         elif self.type == "val":
             raise Exception("Not implemented")
