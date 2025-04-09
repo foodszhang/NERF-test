@@ -78,7 +78,7 @@ class DIF_Net(nn.Module):
         projs = data["projections"]  # B, M, C, W, H
         b, m, w, h = projs.shape
         projs = projs.reshape(b * m, 1, w, h)  # B', C, W, H
-        if not self.training:
+        if self.training:
             if self.image_encoding == "unet3":
                 proj_feats = self.image_encoder(projs)["final_pred"]
             else:
@@ -180,7 +180,7 @@ class ImageNerfNetwork(nn.Module):
         image_encoder,
         bound=0.4,
         num_layers=8,
-        feat_dim=10 * 4,
+        feat_dim=10 * 8,
         hidden_dim=256,
         skips=[4],
     ):
@@ -209,7 +209,11 @@ class ImageNerfNetwork(nn.Module):
         b, m, w, h = projs.shape
         projs = projs.reshape(b * m, 1, w, h)  # B', C, W, H
         with torch.no_grad():
+        if self.training:
             proj_feats = self.image_encoder(projs)["final_pred"]
+        else:
+            proj_feats = self.image_encoder(projs)
+
         proj_feats = list(proj_feats) if type(proj_feats) is tuple else [proj_feats]
         for i in range(len(proj_feats)):
             _, c_, w_, h_ = proj_feats[i].shape
