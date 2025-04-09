@@ -37,6 +37,7 @@ exp:
 #  image_encoder: dif
 network:
   net_type: ImageNerf
+  image_encoder: dif
   #net_type: Nerf
 encoder:
   encoding: hashgrid
