@@ -36,7 +36,7 @@ def get_pts(rays, n_samples, perturb=None):
     return pts, z_vals, rays_o, rays_d
 
 
-def render_with_image_encoder(rays, projs, net, dataset, n_samples):
+def render_with_image_encoder(rays, projs_feats, net, dataset, n_samples):
     pts, z_vals, rays_o, rays_d = get_pts(rays, n_samples, True)
     bound = 0.3
     pts = pts.clamp(-bound, bound)
@@ -55,7 +55,7 @@ def render_with_image_encoder(rays, projs, net, dataset, n_samples):
 
     raw = run_imagenerf_network(
         pts,
-        projs,
+        projs_feats,
         proj_pt,
         net,
     )  # run_network 输出衰减系数μ
@@ -95,7 +95,7 @@ def run_network(inputs, fn, netchunk):
     return out
 
 
-def run_imagenerf_network(pts, projs, proj_pts, imagenerf_net, netchunk=10240):
+def run_imagenerf_network(pts, projs_feats, proj_pts, imagenerf_net, netchunk=10240):
     """
     Prepares inputs and applies network "fn".
     inputs: [N_rays, N_sample, 3] - [1024, 192, 3]  训练的时候
@@ -115,7 +115,7 @@ def run_imagenerf_network(pts, projs, proj_pts, imagenerf_net, netchunk=10240):
         nerf_out = imagenerf_net(
             {
                 "pts": pts[..., left:right, :],
-                "projections": projs,
+                "projs_feats": projs_feats,
                 "proj_pts": proj_pts[..., left:right, :],
             }
         )

@@ -69,7 +69,7 @@ class BasicTrainer(Trainer):
         # ret = render(rays, self.net, self.net_fine, **self.conf["render"])
         ret = render_with_image_encoder(
             rays,
-            data["projs"],
+            data["projs_feats"],
             self.net,
             self.train_dset,
             self.conf["render"]["n_samples"],
@@ -110,7 +110,7 @@ class BasicTrainer(Trainer):
         pts = coord_to_sax(pts)
         raw = run_imagenerf_network(
             pts,
-            projs,
+            self.eval_dset.projs_feats,
             coords,
             self.net,
         )  # run_network 输出衰减系数μ
@@ -138,7 +138,7 @@ class BasicTrainer(Trainer):
             projs_pred.append(
                 render_with_image_encoder(
                     rays[i : i + self.n_rays],
-                    projs,
+                    self.eval_dset.projs_feats,
                     self.net,
                     self.train_dset,
                     self.conf["render"]["n_samples"],

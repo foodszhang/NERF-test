@@ -232,7 +232,7 @@ class NerfDataset(Dataset):
                 "projs": self.projs,
                 "rays": rays,
                 "projs_pts": projs,
-                "projs_feats": self.proj_feats,
+                "projs_feats": self.projs_feats,
             }
             return out
         elif self.type == "val":

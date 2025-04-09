@@ -206,7 +206,7 @@ class ImageNerfNetwork(nn.Module):
         projs = x["projections"]  # B, M, C, W, H
         b, m, w, h = projs.shape
         projs = projs.reshape(b * m, 1, w, h)  # B', C, W, H
-        proj_feats = x["proj_feats"]
+        proj_feats = x["projs_feats"]
         proj_feats = list(proj_feats) if type(proj_feats) is tuple else [proj_feats]
         for i in range(len(proj_feats)):
             _, c_, w_, h_ = proj_feats[i].shape
