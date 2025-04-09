@@ -212,7 +212,8 @@ class ImageNerfNetwork(nn.Module):
         for i in range(n_view):
             f_list = []
             for j in range(c):
-                feat = proj_feats[:, i,j ...]  # B, C, W, H
+                feat = proj_feats[:, i, j, ...]  # B, C, W, H
+                feat = feat.reshape(1, *feat.shape)
                 p = x["proj_pts"][:, i, ...]  # B, N, 2
                 p_feats = index_2d(feat, p)  # B, C, N
                 f_list.append(p_feats)

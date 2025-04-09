@@ -102,12 +102,13 @@ class Trainer:
             dif_net.load_state_dict(ckpt["network"])
             image_encoder = dif_net.image_encoder.eval()
             self.net = network(**cfg["network"]).to(device)
-            self.train_dset.projs_feats = image_encoder(
-                self.train_dset.projs.view(-1, 1, 256, 256)
-            )
-            self.eval_dset.projs_feats = image_encoder(
-                self.eval_dset.projs.view(-1, 1, 256, 256)
-            )
+            with torch.no_grad():
+                self.train_dset.projs_feats = image_encoder(
+                    self.train_dset.projs.view(-1, 1, 256, 256)
+                )
+                self.eval_dset.projs_feats = image_encoder(
+                    self.eval_dset.projs.view(-1, 1, 256, 256)
+                )
         elif image_encoder == "resnet50":
             feature_dim = 64
             image_encoder = torch.nn.Sequential(
