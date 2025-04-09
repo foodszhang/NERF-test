@@ -118,7 +118,7 @@ class Trainer:
             self.net = network(image_encoder=resnet50, **cfg["network"]).to(device)
         #
         # self.net = network().to(device)
-        # self.train_dset = train_dataset
+        self.train_dset = train_dataset
 
         grad_vars = list(self.net.parameters())
         ####TODO:
