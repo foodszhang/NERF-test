@@ -203,22 +203,16 @@ class ImageNerfNetwork(nn.Module):
         经过encoder后变成: (N_rays x N_samples, 32)
         """
         pts = x["pts"]
-        projs = x["projections"]  # B, M, C, W, H
-        b, m, w, h = projs.shape
-        projs = projs.reshape(b * m, 1, w, h)  # B', C, W, H
         proj_feats = x["projs_feats"]
-        proj_feats = list(proj_feats) if type(proj_feats) is tuple else [proj_feats]
-        for i in range(len(proj_feats)):
-            _, c_, w_, h_ = proj_feats[i].shape
-            proj_feats[i] = proj_feats[i].reshape(b, m, c_, w_, h_)  # B, M, C, W, H
-        n_view = proj_feats[0].shape[1]
-
+        b, m, c, w, h = proj_feats.shape
+        # 1, 10, 8 ,256, 256
+        n_view = m
         # 1. query view-specific features
         p_list = []
         for i in range(n_view):
             f_list = []
-            for proj_f in proj_feats:
-                feat = proj_f[:, i, ...]  # B, C, W, H
+            for j in range(c):
+                feat = proj_feats[:, i,j ...]  # B, C, W, H
                 p = x["proj_pts"][:, i, ...]  # B, N, 2
                 p_feats = index_2d(feat, p)  # B, C, N
                 f_list.append(p_feats)
