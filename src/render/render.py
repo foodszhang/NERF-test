@@ -42,22 +42,21 @@ def render_with_image_encoder(rays, projs, net, dataset, n_samples):
     pts = pts.clamp(-bound, bound)
     n_rays = rays.shape[0]
     pts = pts.reshape(-1, 3)
-    # q = coord_to_dif_base(pts)
-    # cl = []
-    # for other_proj_num in range(dataset.n_views):
-    #    coords = dataset.geo.project(q, dataset.angles[other_proj_num])
-    #    coords = torch.tensor(coords, dtype=torch.float32, device=dataset.device)
-    #    cl.append(coords)
-    # coords = torch.stack(cl, dim=0)
+    q = coord_to_dif_base(pts)
+    cl = []
+    for other_proj_num in range(dataset.n_views):
+        coords = dataset.geo.project(q, dataset.angles[other_proj_num])
+        coords = torch.tensor(coords, dtype=torch.float32, device=dataset.device)
+        cl.append(coords)
+    coords = torch.stack(cl, dim=0)
     pts = pts.reshape(1, *pts.shape)
-    # coords = coords.reshape(1, *coords.shape)
-    # proj_pt = coords
+    coords = coords.reshape(1, *coords.shape)
+    proj_pt = coords
 
     raw = run_imagenerf_network(
         pts,
         projs,
-        # proj_pt,
-        [],
+        proj_pt,
         net,
     )  # run_network 输出衰减系数μ
     raw = raw.reshape(n_rays, -1, 1)
@@ -116,8 +115,8 @@ def run_imagenerf_network(pts, projs, proj_pts, imagenerf_net, netchunk=10240):
         nerf_out = imagenerf_net(
             {
                 "pts": pts[..., left:right, :],
-                # "projections": projs,
-                # "proj_pts": proj_pts[..., left:right, :],
+                "projections": projs,
+                "proj_pts": proj_pts[..., left:right, :],
             }
         )
         nerf_list.append(nerf_out)
