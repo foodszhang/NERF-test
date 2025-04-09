@@ -113,8 +113,8 @@ class Trainer:
                 1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False
             )
             num_features = resnet50.fc.in_features
-            resnet50.fc = torch.nn.Linear(num_features, 64)
-
+            resnet50.avgpool = torch.nn.Identity()
+            resnet50.fc = torch.nn.Identity()
             self.net = network(image_encoder=resnet50, **cfg["network"]).to(device)
         #
         # self.net = network().to(device)
