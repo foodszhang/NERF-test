@@ -58,8 +58,8 @@ class DIF_Net(nn.Module):
     def __init__(
         self,
         num_views,
-        mid_ch=64,
-        image_encoding="unet",
+        mid_ch=8,
+        image_encoding="unet3",
         position_encoding="hashgrid",
     ):
         super().__init__()
@@ -155,11 +155,6 @@ class NerfNetwork(nn.Module):
             "interpolation": "Linear",
         }
         # self.encoding = tcnn.Encoding(3, encoding_config)
-        self.mlp = tcnn.Network(
-            encoding_config["n_levels"] * encoding_config["n_features_per_level"],
-            1,
-            mlp_config,
-        )
         self.encoding = get_encoder("hashgrid")
         # self.mlp = DensityNetwork_debug(32)
 
@@ -185,11 +180,9 @@ class ImageNerfNetwork(nn.Module):
         image_encoder,
         bound=0.4,
         num_layers=8,
-        feat_dim=640,
+        feat_dim=10 * 4,
         hidden_dim=256,
         skips=[4],
-        out_dim=1,
-        last_activation="sigmoid",
     ):
         super().__init__()
         self.nunm_layers = num_layers
@@ -198,10 +191,11 @@ class ImageNerfNetwork(nn.Module):
         self.image_encoder = image_encoder
         self.in_dim = feat_dim
         self.bound = bound
+        self.encoding = get_encoder("hashgrid")
 
         # Linear layers
         self.feat_dim = feat_dim
-        self.mlp = tcnn.Network(feat_dim, 1, mlp_config)
+        self.mlp = tcnn.Network(feat_dim + 32, 1, mlp_config)
         # self.mlp = DensityNetwork_debug(mid_ch * num_views)
 
     def forward(self, x):
@@ -234,6 +228,12 @@ class ImageNerfNetwork(nn.Module):
             p_feats = torch.cat(f_list, dim=1)
             p_list.append(p_feats)
         p_feats = torch.cat(p_list, dim=1)  # B, C, N, M
+        b, n, c = pts.shape
+        pts = pts.reshape(-1, c)
+        pos_feat = self.encoding(pts)
+        pos_feat = pos_feat.float()
+        pos_feat = pos_feat.view(b, n, -1)
+        p_feats = torch.cat([pos_feat, p_feats], dim=2)
         x = [self.mlp(p_feat.view(-1, self.feat_dim)) for p_feat in p_feats]
         x = torch.cat(x, dim=1)  # B, C, N, M
         return x.view(b, -1)
