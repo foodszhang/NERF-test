@@ -190,6 +190,7 @@ class ImageNerfNetwork(nn.Module):
         self.in_dim = feat_dim
         self.bound = bound
         self.encoding = get_encoder("hashgrid")
+        self.norm = nn.BatchNorm2d(feat_dim + 32)
 
         # Linear layers
         self.feat_dim = feat_dim
@@ -226,6 +227,8 @@ class ImageNerfNetwork(nn.Module):
         pos_feat = pos_feat.float()
         pos_feat = pos_feat.view(b, -1, n)
         p_feats = torch.cat([pos_feat, p_feats], dim=1)
+        p_feats = self.norm(p_feats)
+        print("123123123", p_feats.max(), p_feats.min(), p_feats[0][0], p_feats[0][-1])
         x = [self.mlp(p_feat.view(-1, self.feat_dim + 32)) for p_feat in p_feats]
         x = torch.cat(x, dim=1)  # B, C, N, M
         return x.view(b, -1)
