@@ -116,7 +116,6 @@ class DIF_Net(nn.Module):
     # proj -> (10, 1024x1, 2)
     def forward_points(self, proj_feats, data):
         n_view = proj_feats[0].shape[1]
-
         # 1. query view-specific features
         p_list = []
         for i in range(n_view):
@@ -223,11 +222,11 @@ class ImageNerfNetwork(nn.Module):
         p_feats = torch.cat(p_list, dim=1)  # B, C, N, M
         b, n, c = pts.shape
         pts = pts.reshape(-1, c)
-        pos_feat = self.encoding(pts)
+        pos_feat = self.encoding(pts, bound=self.bound)
         pos_feat = pos_feat.float()
         pos_feat = pos_feat.view(b, -1, n)
         p_feats = torch.cat([pos_feat, p_feats], dim=1)
-        p_feats = self.norm(p_feats)
+        # p_feats = self.norm(p_feats)
         x = [self.mlp(p_feat.view(-1, self.feat_dim + 32)) for p_feat in p_feats]
         x = torch.cat(x, dim=1)  # B, C, N, M
         return x.view(b, -1)
