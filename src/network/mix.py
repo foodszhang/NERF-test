@@ -194,8 +194,8 @@ class ImageNerfNetwork(nn.Module):
 
         # Linear layers
         self.feat_dim = feat_dim
-        self.mlp = tcnn.Network(feat_dim + 32, 1, mlp_config)
-        # self.mlp = DensityNetwork_debug(mid_ch * num_views)
+        # self.mlp = tcnn.Network(feat_dim + 32, 1, mlp_config)
+        self.mlp = DensityNetwork_debug(feat_dim + 32)
 
     def forward(self, x):
         # stx()
