@@ -58,7 +58,7 @@ class DIF_Net(nn.Module):
     def __init__(
         self,
         num_views,
-        mid_ch=8,
+        mid_ch=4,
         image_encoding="unet3",
         position_encoding="hashgrid",
     ):
@@ -179,7 +179,7 @@ class ImageNerfNetwork(nn.Module):
         self,
         bound=0.4,
         num_layers=8,
-        feat_dim=10 * 8,
+        feat_dim=10 * 4,
         hidden_dim=256,
         skips=[4],
     ):

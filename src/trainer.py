@@ -113,7 +113,7 @@ class Trainer:
                     1, *self.eval_dset.projs_feats.shape
                 )
         elif image_encoder == "resnet50":
-            feature_dim = 64
+            feature_dim = 4
             image_encoder = torch.nn.Sequential(
                 torch.nn.Conv2d(1, 48, 3, stride=1, padding=1),
                 torch.nn.ReLU(inplace=True),
