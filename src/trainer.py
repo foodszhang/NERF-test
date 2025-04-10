@@ -109,6 +109,9 @@ class Trainer:
                 self.eval_dset.projs_feats = image_encoder(
                     self.eval_dset.projs.view(-1, 1, 256, 256)
                 )
+                self.eval_dset.projs_feats = self.eval_dset.projs_feats.reshape(
+                    1, *self.eval_dset.projs_feats.shape
+                )
         elif image_encoder == "resnet50":
             feature_dim = 64
             image_encoder = torch.nn.Sequential(
