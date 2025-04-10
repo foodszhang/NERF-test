@@ -190,7 +190,7 @@ class ImageNerfNetwork(nn.Module):
         self.in_dim = feat_dim
         self.bound = bound
         self.encoding = get_encoder("hashgrid")
-        self.norm = nn.BatchNorm2d(feat_dim + 32)
+        self.norm = nn.InstanceNorm1d(feat_dim + 32)
 
         # Linear layers
         self.feat_dim = feat_dim
