@@ -17,7 +17,7 @@ def coord_to_dif(points):
 
 
 mlp_config = {
-    "otype": "CutlassMLP",
+    "otype": "FullyFusedMLP",
     "activation": "LeakyReLU",
     "output_activation": "Softplus",
     "n_neurons": 128,
