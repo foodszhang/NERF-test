@@ -222,7 +222,7 @@ class ImageNerfNetwork(nn.Module):
         p_feats = torch.cat(p_list, dim=1)  # B, C, N, M
         b, n, c = pts.shape
         pts = pts.reshape(-1, c)
-        pos_feat = self.encoding(pts, bound=self.bound)
+        pos_feat = self.encoding(pts, self.bound)
         pos_feat = pos_feat.float()
         pos_feat = pos_feat.view(b, -1, n)
         p_feats = torch.cat([pos_feat, p_feats], dim=1)
