@@ -237,9 +237,9 @@ class ImageNerfNetwork(nn.Module):
         p_feats = torch.cat(p_list, dim=1)  # B, C, N, M
         b, n, c = pts.shape
         pts = pts.reshape(-1, c)
-        p_feats = (p_feats - p_feats.min()) / (p_feats.max() - p_feats.min())
+        # p_feats = (p_feats - p_feats.min()) / (p_feats.max() - p_feats.min())
         pos_feats = self.encoding(pts, self.bound)
-        pos_feats = (pos_feats - pos_feats.min()) / (pos_feats.max() - pos_feats.min())
+        # pos_feats = (pos_feats - pos_feats.min()) / (pos_feats.max() - pos_feats.min())
         pos_feats = pos_feats.float()
         pos_feats = pos_feats.view(b, -1, n)
 
