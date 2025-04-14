@@ -205,11 +205,31 @@ class ImageNerfNetwork(nn.Module):
         self.feat_dim = feat_dim
         # self.total_dim = 128
         self.total_dim = feat_dim + 32
-        # self.mlp = tcnn.Network(self.total_dim, 1, mlp_config)
-        self.mlp = DensityNetwork_debug(feat_dim + 32)
+        # self.mlp = DensityNetwork_debug(feat_dim + 32)
+        self.mlp = tcnn.Network(128, 1, mlp_config)
         # self.feature_mix_layer = CompactBilinearPooling(
         #    self.feat_dim, 32, self.total_dim, sum_pool=False
         # )
+        z_linears = []
+        mlps = []
+        net_width = 256
+        self.first_layer = nn.Sequential(nn.Linear(32, net_width))
+        for i in range(5):
+            if i == 0:
+                z_linears.append(nn.Linear(40, net_width))
+            else:
+                z_linears.append(nn.Linear(net_width, net_width))
+            mlps.append(
+                nn.Sequential(
+                    nn.Linear(net_width, net_width),
+                    nn.ReLU(),
+                    nn.Linear(net_width, net_width),
+                    nn.ReLU(),
+                )
+            )
+        self.z_linears = nn.ModuleList(z_linears)
+        self.mlps = nn.ModuleList(mlps)
+        self.final_layer = nn.Linear(net_width, 4)
 
     def forward(self, x):
         # stx()
@@ -241,7 +261,13 @@ class ImageNerfNetwork(nn.Module):
         pos_feats = self.encoding(pts, self.bound)
         # pos_feats = (pos_feats - pos_feats.min()) / (pos_feats.max() - pos_feats.min())
         pos_feats = pos_feats.float()
-        pos_feats = pos_feats.view(b, -1, n)
+        pos_feats = pos_feats.permute(0, 2, 1)
+
+        # outputs = self.first_layer(pos_feats)
+        # for idx in range(5):
+        #    resnet_zs = self.z_linears[idx](p_feats)
+        #    outputs = pos_feats + resnet_zs
+        #    outputs = self.mlps[idx](outputs) + outputs
 
         p_feats = torch.cat([pos_feats, p_feats], dim=1)
         # p_feats = self.norm(p_feats)
@@ -249,6 +275,8 @@ class ImageNerfNetwork(nn.Module):
         #    p_feats,
         #    pos_feats,
         # )
-        x = [self.mlp(p_feat.view(-1, self.total_dim)) for p_feat in p_feats]
+        print("123123123", p_feats.shape)
+        x = [self.mlp(p_feat) for p_feat in p_feats]
         x = torch.cat(x, dim=1)  # B, C, N, M
-        return x.view(b, -1)
+        # return outputs.view(b, -1)
+        return x
