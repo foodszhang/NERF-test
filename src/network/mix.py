@@ -23,6 +23,16 @@ mlp_config = {
     "n_neurons": 256,
     "n_hidden_layers": 5,
 }
+encoding_config = {
+    "otype": "Grid",
+    "type": "Hash",
+    "n_levels": 16,
+    "n_features_per_level": 2,
+    "log2_hashmap_size": 19,
+    "base_resolution": 16,
+    "per_level_scale": 1.0,
+    "interpolation": "Linear",
+}
 
 
 def index_2d(feat, uv):
@@ -189,12 +199,13 @@ class ImageNerfNetwork(nn.Module):
         self.in_dim = feat_dim
         self.bound = bound
         self.encoding = get_encoder("hashgrid")
+        # self.encoding = tcnn.Encoding(3, encoding_config)
         self.norm = nn.InstanceNorm1d(feat_dim + 32)
 
         # Linear layers
         self.feat_dim = feat_dim
-        # self.mlp = tcnn.Network(feat_dim + 32, 1, mlp_config)
-        self.mlp = DensityNetwork_debug(feat_dim + 32)
+        self.mlp = tcnn.Network(feat_dim + 32, 1, mlp_config)
+        # self.mlp = DensityNetwork_debug(feat_dim + 32)
 
     def forward(self, x):
         # stx()
@@ -223,6 +234,7 @@ class ImageNerfNetwork(nn.Module):
         b, n, c = pts.shape
         pts = pts.reshape(-1, c)
         pos_feat = self.encoding(pts, self.bound)
+        pos_feat = (pos_feat - pos_feat.min()) / (pos_feat.max() - pos_feat.min())
         pos_feat = pos_feat.float()
         pos_feat = pos_feat.view(b, -1, n)
         p_feats = torch.cat([pos_feat, p_feats], dim=1)
