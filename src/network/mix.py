@@ -204,6 +204,7 @@ class ImageNerfNetwork(nn.Module):
         # Linear layers
         self.feat_dim = feat_dim
         # self.total_dim = 128
+        self.total_dim = feat_dim + 32
         # self.mlp = tcnn.Network(self.total_dim, 1, mlp_config)
         self.mlp = DensityNetwork_debug(feat_dim + 32)
         # self.feature_mix_layer = CompactBilinearPooling(
@@ -248,6 +249,6 @@ class ImageNerfNetwork(nn.Module):
         #    p_feats,
         #    pos_feats,
         # )
-        x = [self.mlp(p_feat.view(-1, n)) for p_feat in p_feats]
+        x = [self.mlp(p_feat.view(-1, self.total_dim)) for p_feat in p_feats]
         x = torch.cat(x, dim=1)  # B, C, N, M
         return x.view(b, -1)
