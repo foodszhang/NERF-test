@@ -248,5 +248,5 @@ class ImageNerfNetwork(nn.Module):
             pos_feats,
         )
         x = [self.mlp(p_feat) for p_feat in p_feats]
-        # x = torch.cat(x, dim=1)  # B, C, N, M
+        x = torch.cat(x, dim=1)  # B, C, N, M
         return x.view(b, -1)
