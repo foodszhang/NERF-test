@@ -21,7 +21,7 @@ mlp_config = {
     "otype": "FullyFusedMLP",
     "activation": "LeakyReLU",
     "output_activation": "Softplus",
-    "n_neurons": 256,
+    "n_neurons": 128,
     "n_hidden_layers": 5,
 }
 encoding_config = {
