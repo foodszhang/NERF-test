@@ -14,9 +14,8 @@ class CompactBilinearPooling(nn.Module):
 
         output_dim: output dimension for compact bilinear pooling.
 
-        sum_pool: (Optional) If True, sum the output along height and width
-                  dimensions and return output shape [batch_size, output_dim].
-                  Otherwise return [batch_size, height, width, output_dim].
+        sum_pool: (Optional) If True, sum the output along dimensions and return output shape [batch_size, output_dim].
+                  Otherwise return [batch_size, length, output_dim].
                   Default: True.
 
         rand_h_1: (Optional) an 1D numpy array containing indices in interval
@@ -82,12 +81,12 @@ class CompactBilinearPooling(nn.Module):
 
     def forward(self, bottom1, bottom2):
         """
-        bottom1: 1st input, 4D Tensor of shape [batch_size, input_dim1, height, width].
-        bottom2: 2nd input, 4D Tensor of shape [batch_size, input_dim2, height, width].
+        bottom1: 1st input, 3D Tensor of shape [batch_size, input_dim1, length].
+        bottom2: 2nd input, 3D Tensor of shape [batch_size, input_dim2, length].
         """
         assert bottom1.size(1) == self.input_dim1 and bottom2.size(1) == self.input_dim2
 
-        batch_size, _, height, width = bottom1.size()
+        batch_size, _, length = bottom1.size()
 
         bottom1_flat = (
             bottom1.permute(0, 2, 3, 1).contiguous().view(-1, self.input_dim1)
@@ -106,7 +105,7 @@ class CompactBilinearPooling(nn.Module):
 
         cbp_flat = afft.ifft(fft_product).real
 
-        cbp = cbp_flat.view(batch_size, height, width, self.output_dim)
+        cbp = cbp_flat.view(batch_size, length, self.output_dim)
 
         if self.sum_pool:
             cbp = cbp.sum(dim=1).sum(dim=1)

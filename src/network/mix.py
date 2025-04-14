@@ -206,9 +206,7 @@ class ImageNerfNetwork(nn.Module):
         self.total_dim = feat_dim + 32
         self.mlp = tcnn.Network(self.total_dim, 1, mlp_config)
         # self.mlp = DensityNetwork_debug(feat_dim + 32)
-        self.feature_mix_layer = CompactBilinearPooling(
-            self.total_dim, self.total_dim, 128
-        )
+        self.feature_mix_layer = CompactBilinearPooling(self.feat_dim, 32, 128)
 
     def forward(self, x):
         # stx()
