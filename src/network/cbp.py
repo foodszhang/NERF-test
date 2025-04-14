@@ -88,12 +88,8 @@ class CompactBilinearPooling(nn.Module):
 
         batch_size, _, length = bottom1.size()
 
-        bottom1_flat = (
-            bottom1.permute(0, 2, 3, 1).contiguous().view(-1, self.input_dim1)
-        )
-        bottom2_flat = (
-            bottom2.permute(0, 2, 3, 1).contiguous().view(-1, self.input_dim2)
-        )
+        bottom1_flat = bottom1.permute(0, 2, 1).contiguous().view(-1, self.input_dim1)
+        bottom2_flat = bottom2.permute(0, 2, 1).contiguous().view(-1, self.input_dim2)
 
         sketch_1 = bottom1_flat.mm(self.sparse_sketch_matrix1)
         sketch_2 = bottom2_flat.mm(self.sparse_sketch_matrix2)
