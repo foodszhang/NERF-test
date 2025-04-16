@@ -146,7 +146,7 @@ class NerfDataset(Dataset):
         self.near, self.far = self.get_near_far(self.geo)
         self.n_views = self.cfg["n_views"]
         self.device = device
-        self.window_size = [25, 25]
+        self.window_size = [81, 81]
         self.voxels = torch.tensor(
             self.get_voxels(self.geo), dtype=torch.float32, device=device
         )
@@ -155,7 +155,6 @@ class NerfDataset(Dataset):
         points = np.mgrid[:256, :256, :256]
         points = points.astype(float) / (256 - 1)
         points = points.reshape(3, -1)
-        self.window_num = 4
         self.points = points.transpose(1, 0)  # N, 3
         self.npoint = 30000
         rays = self.get_rays(
@@ -222,25 +221,15 @@ class NerfDataset(Dataset):
             projs = self.projs[index]  #
             projs_shape = projs.shape
             hw = (self.window_size[0] - 1) // 2
-            xs = np.random.choice(
-                np.arange(hw, projs_shape[0] - hw),
-                size=[self.window_num],
-                replace=False,
+            x, y = np.random.randint(hw, projs_shape[0] - hw), np.random.randint(
+                hw, projs_shape[0] - hw
             )
-            ys = np.random.choice(
-                np.arange(hw, projs_shape[0] - hw),
-                size=[self.window_num],
-                replace=False,
-            )
-            projs_window = [
-                projs[x - hw : x + hw, y - hw : y + hw] for x, y in zip(xs, ys)
-            ]
-            rays_window = [
-                rays[x - hw : x + hw, y - hw : y + hw] for x, y in zip(xs, ys)
-            ]
+            projs_window = projs[x - hw : x + hw, y - hw : y + hw]
+            rays_window = rays[x - hw : x + hw, y - hw : y + hw]
+
             # 选取 window_inds
-            projs_window = torch.concat(projs_window, dim=0)
-            rays_window = torch.concat(rays_window, dim=0)
+            projs_window = torch.stack(projs_window, dim=0)
+            rays_window = torch.stack(rays_window, dim=0)
 
             out = {
                 "projs": self.projs,
