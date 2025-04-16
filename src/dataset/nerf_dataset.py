@@ -221,7 +221,7 @@ class NerfDataset(Dataset):
             rays = self.rays[index]
             projs = self.projs[index]  #
             projs_shape = projs.shape
-            hw = (self.window_size - 1) / 2
+            hw = (self.window_size[0] - 1) // 2
             xs = np.random.choice(
                 np.arange(hw, projs_shape[0] - hw),
                 size=[self.window_num],
@@ -239,6 +239,8 @@ class NerfDataset(Dataset):
                 rays[x - hw : x + hw, y - hw : y + hw] for x, y in zip(xs, ys)
             ]
             # 选取 window_inds
+            projs_window = torch.concat(projs_window, dim=0)
+            rays_window = torch.concat(rays_window, dim=0)
 
             out = {
                 "projs": self.projs,
