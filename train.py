@@ -67,7 +67,7 @@ class BasicTrainer(Trainer):
             -1
         )  # projection 的 ground truth [1, 1024] -> [1024]
         # ret = render(rays, self.net, self.net_fine, **self.conf["render"])
-        b, window_num, window_size, _ = data["rays"].shape
+        b, window_num, window_size, _, _ = data["rays"].shape
         loss = {"loss": 0.0}
         for i in range(window_num):
             ret = render_with_image_encoder(
@@ -78,16 +78,22 @@ class BasicTrainer(Trainer):
                 self.conf["render"]["n_samples"],
             )
             # stx()
-            projs_pred = ret["acc"]
-            calc_mse_loss(loss, projs, projs_pred)
+            projs_pred = ret["acc"].reshape(b, window_size, window_size)
+            calc_mse_loss(loss, data["projs_pts"][:, i], projs_pred)
             with torch.no_grad():
-                proj_f = self.image_encoder(data["projs_pts"][i])
-                pred_f = self.image_encoder(projs_pred)
+                proj_f = self.image_encoder(
+                    data["projs_pts"][:, i].view(b, 1, window_size, window_size)
+                )
+                pred_f = self.image_encoder(
+                    projs_pred.view(b, 1, window_size, window_size)
+                )
             p_loss = torch.nn.functional.l1_loss(proj_f, pred_f)
 
             loss["loss_perceptual"] = p_loss
             loss["loss"] += 1e-3 * p_loss
-            image_pred = ret["raw"].reshape(window_size, window_size)
+            image_pred = ret["raw"].reshape(
+                self.conf["render"]["n_samples"], window_size, window_size
+            )
             calc_tv_loss(loss, image_pred, 1e-3)
 
         # Log
