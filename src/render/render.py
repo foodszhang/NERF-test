@@ -37,6 +37,7 @@ def get_pts(rays, n_samples, perturb=None):
 
 
 def render_with_image_encoder(rays, projs_feats, net, dataset, n_samples):
+    rays = rays.reshape(-1, 8)
     pts, z_vals, rays_o, rays_d = get_pts(rays, n_samples, True)
     bound = 0.3
     pts = pts.clamp(-bound, bound)

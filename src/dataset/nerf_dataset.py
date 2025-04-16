@@ -115,6 +115,41 @@ def gen_test_array():
     return torch.tensor(q, dtype=torch.float32)
 
 
+def proj_window_partition(x, window_size):
+    """
+    x: [256, 256]
+    return out: [8*8, 32, 32], where n = window_size[0]*window_size[1] is the length of sentence
+    然后 n, c 内部计算 self-attention ?
+    """
+    # stx()
+    h, w = x.shape  # x.shape = [256, 256], window_size = (32, 32)
+    x = x.view(
+        h // window_size[0], window_size[0], w // window_size[1], window_size[1]
+    )  # [256, 256] -> [8, 32, 8, 32]
+    windows = (
+        x.permute(0, 2, 1, 3).contiguous().view(-1, window_size[0], window_size[1])
+    )  # [8, 32, 8, 32] -> [8, 8, 32, 32] -> [64, 32, 32]
+    return windows
+
+
+def ray_window_partition(x, window_size):
+    """
+    x: [256, 256, 8]
+    return out: [8*8, 32, 32, 8],
+    """
+    # stx()
+    h, w, c = x.shape  # x.shape = [256, 256, 8], window_size = (32, 32)
+    x = x.view(
+        h // window_size[0], window_size[0], w // window_size[1], window_size[1], c
+    )  # [256, 256, 8] -> [8, 32, 8, 32, 8]
+    windows = (
+        x.permute(0, 2, 1, 3, 4)
+        .contiguous()
+        .view(-1, window_size[0], window_size[1], c)
+    )  # x: [8, 32, 8, 32, 8] -> [8, 8, 32, 32, 8] -> [64, 32, 32, 8]
+    return windows
+
+
 Q = gen_test_array()
 
 
@@ -146,6 +181,7 @@ class NerfDataset(Dataset):
         self.near, self.far = self.get_near_far(self.geo)
         self.n_views = self.cfg["n_views"]
         self.device = device
+        self.window_size = [16, 16]
         self.voxels = torch.tensor(
             self.get_voxels(self.geo), dtype=torch.float32, device=device
         )
@@ -154,6 +190,7 @@ class NerfDataset(Dataset):
         points = np.mgrid[:256, :256, :256]
         points = points.astype(float) / (256 - 1)
         points = points.reshape(3, -1)
+        self.window_num = n_rays / (self.window_size[0] * self.window_size[1])
         self.points = points.transpose(1, 0)  # N, 3
         self.npoint = 30000
         rays = self.get_rays(
@@ -216,22 +253,27 @@ class NerfDataset(Dataset):
             # projections = projections / projections.max()
             # pts = self.voxels.reshape(-1, 3)
             # points = self.sample_points_pdf(pts)
-            projs_valid = (self.projs[index] > 0).flatten()
-            coords_valid = self.coords[
-                projs_valid
-            ]  # [65536, 2] -> [40653, 2], 将布尔值矩阵当做索引，可能是因为并不是所有的
-            select_inds = np.random.choice(
-                coords_valid.shape[0], size=[self.n_rays], replace=False
-            )  # 从 0 ~ 40653-1 中选取 1024 个值
-            select_coords = coords_valid[select_inds].long()  # 根据选取的索引值来取坐标
-            rays = self.rays[
-                index, select_coords[:, 0], select_coords[:, 1]
-            ]  # self.rays: [50, 256, 256, 6], index 决定了取哪一个角度或样例，后两项决定了横纵坐标
-            projs = self.projs[index, select_coords[:, 0], select_coords[:, 1]]  #
+            rays = self.rays[index]
+            rays_window = ray_window_partition(rays, self.window_size)
+            projs = self.projs[index]  #
+            projs_window = proj_window_partition(
+                projs, self.window_size
+            )  # [256, 256] -> [64, 32, 32]
+            projs_window_valid_indx = (projs_window > 0).sum(dim=-1).sum(
+                dim=-1
+            ) == self.window_size[0] * self.window_size[1]
+            # 选取 window_inds
+            select_inds_window = np.random.choice(
+                projs_window_valid_indx.shape[0], size=[self.window_num], replace=False
+            )  # 从 0 ~ 64-1 中选取 window_num 个值
+
+            projs_window_select = projs_window[select_inds_window]  # [4, 16, 16]
+            rays_window_select = rays_window[select_inds_window]  # [4, 16, 16, 8]
+
             out = {
                 "projs": self.projs,
-                "rays": rays,
-                "projs_pts": projs,
+                "rays": rays_window_select,
+                "projs_pts": projs_window_select,
                 "projs_feats": self.projs_feats,
             }
             return out
