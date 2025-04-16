@@ -33,6 +33,7 @@ from src.config.configloading import load_config
 from src.render import (
     render_with_image_encoder,
     run_imagenerf_network,
+    render_with_dif,
 )
 from src.trainer import Trainer
 from src.loss import calc_mse_loss, calc_tv_loss, compute_tv_norm
@@ -69,7 +70,7 @@ class BasicTrainer(Trainer):
         # ret = render(rays, self.net, self.net_fine, **self.conf["render"])
         b, window_size, _, _ = data["rays"].shape
         loss = {"loss": 0.0}
-        ret = render_with_image_encoder(
+        ret = render_with_dif(
             data["rays"],
             data["projs_feats"],
             self.net,
@@ -79,15 +80,15 @@ class BasicTrainer(Trainer):
         # stx()
         projs_pred = ret["acc"].reshape(b, window_size, window_size)
         calc_mse_loss(loss, data["projs_pts"], projs_pred)
-        with torch.no_grad():
-            proj_f = self.image_encoder(
-                data["projs_pts"].view(b, 1, window_size, window_size)
-            )
-            pred_f = self.image_encoder(projs_pred.view(b, 1, window_size, window_size))
-        p_loss = torch.nn.functional.l1_loss(proj_f, pred_f)
+        # with torch.no_grad():
+        #    proj_f = self.image_encoder(
+        #        data["projs_pts"].view(b, 1, window_size, window_size)
+        #    )
+        #    pred_f = self.image_encoder(projs_pred.view(b, 1, window_size, window_size))
+        # p_loss = torch.nn.functional.l1_loss(proj_f, pred_f)
 
-        loss["loss_perceptual"] = p_loss
-        loss["loss"] += 1e-3 * p_loss
+        # loss["loss_perceptual"] = p_loss
+        # loss["loss"] += 1e-3 * p_loss
         image_pred = ret["raw"].reshape(
             self.conf["render"]["n_samples"], window_size, window_size
         )
@@ -151,7 +152,7 @@ class BasicTrainer(Trainer):
             range(0, rays.shape[0], self.n_rays)
         ):  # 每一簇射线是 n_rays ，每隔这么多射线渲染一次
             projs_pred.append(
-                render_with_image_encoder(
+                render_with_dif(
                     rays[i : i + self.n_rays],
                     self.eval_dset.projs_feats,
                     self.net,

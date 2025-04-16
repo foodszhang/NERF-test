@@ -36,6 +36,87 @@ def get_pts(rays, n_samples, perturb=None):
     return pts, z_vals, rays_o, rays_d
 
 
+def render_with_dif(rays, projs_feats, net, dataset, n_samples):
+    net_fine = True
+    n_fine = 2 * n_samples
+    rays = rays.reshape(-1, 8)
+    pts, z_vals, rays_o, rays_d = get_pts(rays, n_samples, True)
+    bound = 0.3
+    pts = pts.clamp(-bound, bound)
+    n_rays = rays.shape[0]
+    pts = pts.reshape(-1, 3)
+    q = coord_to_dif_base(pts)
+    cl = []
+    for other_proj_num in range(dataset.n_views):
+        coords = dataset.geo.project(q, dataset.angles[other_proj_num])
+        coords = torch.tensor(coords, dtype=torch.float32, device=dataset.device)
+        cl.append(coords)
+    coords = torch.stack(cl, dim=0)
+    pts = pts.reshape(1, *pts.shape)
+    coords = coords.reshape(1, *coords.shape)
+    proj_pt = coords
+
+    with torch.no_grad():
+        raw = run_dif_network(
+            pts,
+            projs_feats,
+            proj_pt,
+            net.dif_net,
+        )  # run_network 输出衰减系数μ
+    raw = raw.reshape(n_rays, -1, 1)
+    acc, weights = raw2outputs(raw, z_vals, rays_d)  # acc 和 weights 各自的含义是？
+    ret = {"acc": acc, "pts": pts, "raw": raw, "weights": weights}
+    for k in ret:
+        if (torch.isnan(ret[k]).any() or torch.isinf(ret[k]).any()) and k != "weights":
+            print(f"! [Numerical Error] {k} contains nan or inf.")
+    # net fine
+    if net_fine:
+        acc_0 = acc
+        weights_0 = weights
+        pts_0 = pts
+
+        z_vals_mid = 0.5 * (z_vals[..., 1:] + z_vals[..., :-1])
+        z_samples = sample_pdf(
+            z_vals_mid, weights[..., 1:-1], n_fine, det=False)
+        )
+        z_samples = z_samples.detach()
+
+        z_vals, _ = torch.sort(torch.cat([z_vals, z_samples], -1), -1)
+        pts = rays_o[..., None, :] + rays_d[..., None, :] * z_vals[..., :, None]
+        pts = pts.clamp(-bound, bound)
+        pts = pts.reshape(-1, 3)
+        q = coord_to_dif_base(pts)
+        cl = []
+        for other_proj_num in range(dataset.n_views):
+            coords = dataset.geo.project(q, dataset.angles[other_proj_num])
+            coords = torch.tensor(coords, dtype=torch.float32, device=dataset.device)
+            cl.append(coords)
+        coords = torch.stack(cl, dim=0)
+        pts = pts.reshape(1, *pts.shape)
+        coords = coords.reshape(1, *coords.shape)
+        proj_pt = coords
+        raw = run_imagenerf_network(
+            pts,
+            projs_feats,
+            proj_pt,
+            net,
+        )  # run_network 输出衰减系数μ
+        acc, _ = raw2outputs(raw, z_vals, rays_d)
+
+        ret = {"acc": acc, "pts": pts, "raw": raw}
+
+        if net_fine is not None and n_fine > 0:
+            ret["acc0"] = acc_0
+            ret["weights0"] = weights_0
+            ret["pts0"] = pts_0
+
+        for k in ret:
+            if torch.isnan(ret[k]).any() or torch.isinf(ret[k]).any():
+                print(f"! [Numerical Error] {k} contains nan or inf.")
+
+    return ret
+
+
 def render_with_image_encoder(rays, projs_feats, net, dataset, n_samples):
     rays = rays.reshape(-1, 8)
     pts, z_vals, rays_o, rays_d = get_pts(rays, n_samples, True)
@@ -173,6 +254,38 @@ def raw2outputs(raw, z_vals, rays_d, raw_noise_std=0.0):
         raise NotImplementedError("Wrong raw shape")
 
     return acc, weights
+
+
+def run_dif_network(pts, projs, proj_pts, dif_net, netchunk=10240):
+    """
+    Prepares inputs and applies network "fn".
+    inputs: [N_rays, N_sample, 3] - [1024, 192, 3]  训练的时候
+    uvt_flat: [N_rays * N_sample, 3]
+    netchunk: 是409600, 网络每次可以跑 409600 个点
+    所以 NeRF 模型的输入样例应该是 [1024x192, 3]
+
+    测试的时候, input sample 是 (128, 128, 128, 3)
+    out: [1024, 192, 1]
+    """
+    total_npoint = pts.shape[1]
+    n_batch = int(np.ceil(total_npoint / netchunk))
+    dif_list = []
+    for i in range(n_batch):
+        left = i * netchunk
+        right = min((i + 1) * netchunk, total_npoint)
+        dif_out, _ = dif_net(
+            {
+                "pts": pts[..., left:right, :],
+                "proj_feats": projs,
+                "proj_pts": proj_pts[..., left:right, :],
+            }
+        )
+        dif_out = dif_out.detach()
+        dif_list.append(dif_out)
+
+    dif_out = torch.cat(dif_list, dim=2)
+
+    return dif_out
 
 
 def sample_pdf(bins, weights, N_samples, det=False):

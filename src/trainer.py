@@ -95,44 +95,30 @@ class Trainer:
         cfg["network"].pop("net_type", None)
         image_encoder = cfg["network"].pop("image_encoder", None)
         self.train_dset = train_dataset
-        if image_encoder == "dif":
-            # stx()
-            dif_net = get_network("dif")(cfg["train"]["n_views"]).to(device)
-            ckpt = torch.load("./best_dif.ckpt")
-            dif_net.load_state_dict(ckpt["network"])
-            image_encoder = dif_net.image_encoder.eval()
-            self.net = network(**cfg["network"]).to(device)
-            self.image_encoder = image_encoder
-            with torch.no_grad():
-                self.train_dset.projs_feats = image_encoder(
-                    self.train_dset.projs.view(-1, 1, 256, 256)
-                )
-                self.train_dset.projs_feats = (
-                    self.train_dset.projs_feats - self.train_dset.projs_feats.min()
-                ) / (
-                    self.train_dset.projs_feats.max()
-                    - self.train_dset.projs_feats.min()
-                )
-                self.eval_dset.projs_feats = image_encoder(
-                    self.eval_dset.projs.view(-1, 1, 256, 256)
-                )
-                self.eval_dset.projs_feats = self.eval_dset.projs_feats.reshape(
-                    1, *self.eval_dset.projs_feats.shape
-                )
-                # normalize
-                self.eval_dset.projs_feats = (
-                    self.eval_dset.projs_feats - self.eval_dset.projs_feats.min()
-                ) / (
-                    self.eval_dset.projs_feats.max() - self.eval_dset.projs_feats.min()
-                )
-        elif image_encoder == "resnet50":
-            feature_dim = 4
-            image_encoder = torch.nn.Sequential(
-                torch.nn.Conv2d(1, 48, 3, stride=1, padding=1),
-                torch.nn.ReLU(inplace=True),
-                torch.nn.Conv2d(48, feature_dim, 3, padding=1),
+        dif_net = get_network("dif")(cfg["train"]["n_views"]).to(device)
+        ckpt = torch.load("./best_dif.ckpt")
+        dif_net.load_state_dict(ckpt["network"])
+        image_encoder = dif_net.image_encoder.eval()
+        self.net = network(**cfg["network"]).to(device)
+        self.net.dif_net = dif_net
+        self.image_encoder = image_encoder
+        with torch.no_grad():
+            self.train_dset.projs_feats = image_encoder(
+                self.train_dset.projs.view(-1, 1, 256, 256)
             )
-            self.net = network(image_encoder=image_encoder, **cfg["network"]).to(device)
+            self.train_dset.projs_feats = (
+                self.train_dset.projs_feats - self.train_dset.projs_feats.min()
+            ) / (self.train_dset.projs_feats.max() - self.train_dset.projs_feats.min())
+            self.eval_dset.projs_feats = image_encoder(
+                self.eval_dset.projs.view(-1, 1, 256, 256)
+            )
+            self.eval_dset.projs_feats = self.eval_dset.projs_feats.reshape(
+                1, *self.eval_dset.projs_feats.shape
+            )
+            # normalize
+            self.eval_dset.projs_feats = (
+                self.eval_dset.projs_feats - self.eval_dset.projs_feats.min()
+            ) / (self.eval_dset.projs_feats.max() - self.eval_dset.projs_feats.min())
         #
         # self.net = network().to(device)
 

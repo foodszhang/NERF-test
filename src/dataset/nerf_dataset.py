@@ -230,9 +230,6 @@ class NerfDataset(Dataset):
                 rays_window = rays[x - hw : x + hw, y - hw : y + hw]
 
                 # 选取 window_inds
-                projs_window = torch.stack(projs_window, dim=0)
-                rays_window = torch.stack(rays_window, dim=0)
-
                 out = {
                     "projs": self.projs,
                     "rays": rays_window,

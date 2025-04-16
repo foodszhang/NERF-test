@@ -84,24 +84,27 @@ class DIF_Net(nn.Module):
         self.position_encoder = get_encoder(position_encoding)
         self.mlp = DensityNetwork_debug(mid_ch * num_views)
 
-    def forward(self, data, eval_npoint=10240):
+    def forward(self, data, eval_npoint=10240, use_feat=False):
         # projection encoding
-        projs = data["projections"]  # B, M, C, W, H
-        b, m, w, h = projs.shape
-        projs = projs.reshape(b * m, 1, w, h)  # B', C, W, H
-        if self.training:
-            if self.image_encoding == "unet3":
-                proj_feats = self.image_encoder(projs)["final_pred"]
+        if use_feat:
+            projs = data["projections"]  # B, M, C, W, H
+            b, m, w, h = projs.shape
+            projs = projs.reshape(b * m, 1, w, h)  # B', C, W, H
+            if self.training:
+                if self.image_encoding == "unet3":
+                    proj_feats = self.image_encoder(projs)["final_pred"]
+                else:
+                    proj_feats = self.image_encoder(projs)
+
             else:
                 proj_feats = self.image_encoder(projs)
 
+            proj_feats = list(proj_feats) if type(proj_feats) is tuple else [proj_feats]
+            for i in range(len(proj_feats)):
+                _, c_, w_, h_ = proj_feats[i].shape
+                proj_feats[i] = proj_feats[i].reshape(b, m, c_, w_, h_)  # B, M, C, W, H
         else:
-            proj_feats = self.image_encoder(projs)
-
-        proj_feats = list(proj_feats) if type(proj_feats) is tuple else [proj_feats]
-        for i in range(len(proj_feats)):
-            _, c_, w_, h_ = proj_feats[i].shape
-            proj_feats[i] = proj_feats[i].reshape(b, m, c_, w_, h_)  # B, M, C, W, H
+            proj_feats = data["proj_feats"]
 
         # point-wise forward
         total_npoint = data["proj_pts"].shape[2]
