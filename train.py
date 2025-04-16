@@ -86,7 +86,7 @@ class BasicTrainer(Trainer):
             p_loss = torch.nn.functional.l1_loss(proj_f, pred_f)
 
             loss["loss_perceptual"] = p_loss
-            loss["loss"] += p_loss
+            loss["loss"] += 1e-3 * p_loss
             image_pred = ret["raw"].reshape(window_size, window_size)
             calc_tv_loss(loss, image_pred, 1e-3)
 
