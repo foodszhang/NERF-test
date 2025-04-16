@@ -70,7 +70,7 @@ class DIF_Net(nn.Module):
         self,
         num_views,
         mid_ch=4,
-        image_encoding="unet3",
+        image_encoding="unet",
         position_encoding="hashgrid",
     ):
         super().__init__()
@@ -206,7 +206,7 @@ class ImageNerfNetwork(nn.Module):
         # self.total_dim = 128
         self.total_dim = feat_dim + 32
         # self.mlp = DensityNetwork_debug(feat_dim + 32)
-        self.mlp = tcnn.Network(128, 1, mlp_config)
+        self.mlp = tcnn.Network(self.total_dim, 1, mlp_config)
         # self.feature_mix_layer = CompactBilinearPooling(
         #    self.feat_dim, 32, self.total_dim, sum_pool=False
         # )
@@ -261,22 +261,22 @@ class ImageNerfNetwork(nn.Module):
         pos_feats = self.encoding(pts, self.bound)
         # pos_feats = (pos_feats - pos_feats.min()) / (pos_feats.max() - pos_feats.min())
         pos_feats = pos_feats.float()
-        pos_feats = pos_feats.permute(0, 2, 1)
-
+        pos_feats = pos_feats.reshape(b, n, -1)
+        p_feats = p_feats.permute(0, 2, 1)
         # outputs = self.first_layer(pos_feats)
         # for idx in range(5):
         #    resnet_zs = self.z_linears[idx](p_feats)
         #    outputs = pos_feats + resnet_zs
         #    outputs = self.mlps[idx](outputs) + outputs
 
-        p_feats = torch.cat([pos_feats, p_feats], dim=1)
+        p_feats = torch.cat([pos_feats, p_feats], dim=2)
         # p_feats = self.norm(p_feats)
         # p_feats = self.feature_mix_layer(
         #    p_feats,
         #    pos_feats,
         # )
-        print("123123123", p_feats.shape)
         x = [self.mlp(p_feat) for p_feat in p_feats]
         x = torch.cat(x, dim=1)  # B, C, N, M
         # return outputs.view(b, -1)
+        x = x.reshape(b, n, 1)
         return x
