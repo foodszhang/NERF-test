@@ -70,7 +70,7 @@ class BasicTrainer(Trainer):
         b, window_size, _, _ = data["rays"].shape
         loss = {"loss": 0.0}
         ret = render_with_image_encoder(
-            data["rays"][:, i],
+            data["rays"],
             data["projs_feats"],
             self.net,
             self.train_dset,
@@ -78,10 +78,10 @@ class BasicTrainer(Trainer):
         )
         # stx()
         projs_pred = ret["acc"].reshape(b, window_size, window_size)
-        calc_mse_loss(loss, data["projs_pts"][:, i], projs_pred)
+        calc_mse_loss(loss, data["projs_pts"], projs_pred)
         with torch.no_grad():
             proj_f = self.image_encoder(
-                data["projs_pts"][:, i].view(b, 1, window_size, window_size)
+                data["projs_pts"].view(b, 1, window_size, window_size)
             )
             pred_f = self.image_encoder(projs_pred.view(b, 1, window_size, window_size))
         p_loss = torch.nn.functional.l1_loss(proj_f, pred_f)

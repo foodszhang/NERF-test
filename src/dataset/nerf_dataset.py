@@ -200,6 +200,7 @@ class NerfDataset(Dataset):
         projections = pickle.load(open(projection_path, "rb"))
         projections = torch.tensor(projections, dtype=torch.float32, device=self.device)
         self.projs = projections
+        self.patch_sample = True
 
     def __len__(self):
         if self.type == "train":
@@ -217,27 +218,54 @@ class NerfDataset(Dataset):
             # projections = projections / projections.max()
             # pts = self.voxels.reshape(-1, 3)
             # points = self.sample_points_pdf(pts)
-            rays = self.rays[index]
-            projs = self.projs[index]  #
-            projs_shape = projs.shape
-            hw = (self.window_size[0] - 1) // 2
-            x, y = np.random.randint(hw, projs_shape[0] - hw), np.random.randint(
-                hw, projs_shape[0] - hw
-            )
-            projs_window = projs[x - hw : x + hw, y - hw : y + hw]
-            rays_window = rays[x - hw : x + hw, y - hw : y + hw]
+            if self.patch_sample:
+                rays = self.rays[index]
+                projs = self.projs[index]  #
+                projs_shape = projs.shape
+                hw = (self.window_size[0] - 1) // 2
+                x, y = np.random.randint(hw, projs_shape[0] - hw), np.random.randint(
+                    hw, projs_shape[0] - hw
+                )
+                projs_window = projs[x - hw : x + hw, y - hw : y + hw]
+                rays_window = rays[x - hw : x + hw, y - hw : y + hw]
 
-            # 选取 window_inds
-            projs_window = torch.stack(projs_window, dim=0)
-            rays_window = torch.stack(rays_window, dim=0)
+                # 选取 window_inds
+                projs_window = torch.stack(projs_window, dim=0)
+                rays_window = torch.stack(rays_window, dim=0)
 
-            out = {
-                "projs": self.projs,
-                "rays": rays_window,
-                "projs_pts": projs_window,
-                "projs_feats": self.projs_feats,
-            }
-            return out
+                out = {
+                    "projs": self.projs,
+                    "rays": rays_window,
+                    "projs_pts": projs_window,
+                    "projs_feats": self.projs_feats,
+                }
+                return out
+            else:
+                # 只用第一个的
+                # projections = projections / projections.max()
+                # pts = self.voxels.reshape(-1, 3)
+                # points = self.sample_points_pdf(pts)
+                projs_valid = (self.projs[index] > 0).flatten()
+                coords_valid = self.coords[
+                    projs_valid
+                ]  # [65536, 2] -> [40653, 2], 将布尔值矩阵当做索引，可能是因为并不是所有的
+                select_inds = np.random.choice(
+                    coords_valid.shape[0], size=[self.n_rays], replace=False
+                )  # 从 0 ~ 40653-1 中选取 1024 个值
+                select_coords = coords_valid[
+                    select_inds
+                ].long()  # 根据选取的索引值来取坐标
+                rays = self.rays[
+                    index, select_coords[:, 0], select_coords[:, 1]
+                ]  # self.rays: [50, 256, 256, 6], index 决定了取哪一个角度或样例，后两项决定了横纵坐标
+                projs = self.projs[index, select_coords[:, 0], select_coords[:, 1]]  #
+                out = {
+                    "projs": self.projs,
+                    "rays": rays,
+                    "projs_pts": projs,
+                    "projs_feats": self.projs_feats,
+                }
+                return out
         elif self.type == "val":
             raise Exception("Not implemented")
         return {}
