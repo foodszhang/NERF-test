@@ -99,22 +99,22 @@ class BasicTrainer(Trainer):
                 data["projs_pts"][:, i], projs_pred
             )
             loss["loss"] += loss["loss_l1"]
-            # with torch.no_grad():
-            #    pred_f = self.image_encoder(
-            #        projs_pred.view(b, 1, window_size, window_size)
-            #    )
-            #    proj_f = self.image_encoder(
-            #        data["projs_pts"][:, i].view(b, 1, window_size, window_size)
-            #    )
-            # if idx_epoch > 50:
-            #    p_loss = torch.nn.functional.l1_loss(proj_f, pred_f)
+            with torch.no_grad():
+                pred_f = self.image_encoder(
+                    projs_pred.view(b, 1, window_size, window_size)
+                )["final_pred"]
+                proj_f = self.image_encoder(
+                    data["projs_pts"][:, i].view(b, 1, window_size, window_size)
+                )["final_pred"]
+            if idx_epoch > 50:
+                p_loss = torch.nn.functional.l1_loss(proj_f, pred_f)
 
-            #    loss["loss_perceptual"] = p_loss
-            #    loss["loss"] += 1e-2 * p_loss
-            #    image_pred = ret["raw"].reshape(
-            #        self.conf["render"]["n_samples"] * 3, window_size, window_size
-            #    )
-            #    calc_tv_loss(loss, image_pred, 1e-2)
+                loss["loss_perceptual"] = p_loss
+                loss["loss"] += 1e-2 * p_loss
+                image_pred = ret["raw"].reshape(
+                    self.conf["render"]["n_samples"] * 3, window_size, window_size
+                )
+                calc_tv_loss(loss, image_pred, 1e-2)
 
         # Log
         for ls in loss.keys():
