@@ -84,7 +84,7 @@ class BasicTrainer(Trainer):
             # ret = render(rays, self.net, self.net_fine, **self.conf["render"])
             loss = {"loss": 0.0}
             # ret = render_with_dif(
-            ret = render_with_dif_result(
+            ret = render_with_dif(
                 data["rays"][:, i],
                 data["projs_feats"],
                 self.net,
@@ -106,15 +106,15 @@ class BasicTrainer(Trainer):
                 proj_f = self.image_encoder(
                     data["projs_pts"][:, i].view(b, 1, window_size, window_size)
                 )["final_pred"]
-            if idx_epoch > 50:
-                p_loss = torch.nn.functional.l1_loss(proj_f, pred_f)
+            p_loss = torch.nn.functional.l1_loss(proj_f, pred_f)
 
-                loss["loss_perceptual"] = p_loss
-                loss["loss"] += 1e-2 * p_loss
-                image_pred = ret["raw"].reshape(
-                    self.conf["render"]["n_samples"] * 3, window_size, window_size
-                )
-                calc_tv_loss(loss, image_pred, 1e-2)
+            loss["loss_perceptual"] = p_loss
+            loss["loss"] += 1e-2 * p_loss
+            # if idx_epoch > 50:
+            #    image_pred = ret["raw"].reshape(
+            #        self.conf["render"]["n_samples"] * 3, window_size, window_size
+            #    )
+            #    calc_tv_loss(loss, image_pred, 1e-2)
 
         # Log
         for ls in loss.keys():
@@ -178,7 +178,7 @@ class BasicTrainer(Trainer):
         ):  # 每一簇射线是 n_rays ，每隔这么多射线渲染一次
             projs_pred.append(
                 # render_with_dif(
-                render_with_dif_result(
+                render_with_dif(
                     rays[i : i + self.n_rays],
                     self.eval_dset.projs_feats,
                     self.net,

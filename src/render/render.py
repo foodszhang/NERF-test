@@ -93,7 +93,7 @@ def render_with_dif(rays, projs_feats, net, dataset, n_samples):
         pts = pts.reshape(1, *pts.shape)
         coords = coords.reshape(1, *coords.shape)
         proj_pt = coords
-        raw = run_imagenerf_network(
+        raw = run_imagenerf_network_with_dif(
             pts,
             projs_feats,
             proj_pt,
