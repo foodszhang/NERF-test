@@ -59,7 +59,7 @@ encoder:
   #encoding: sphere_harmonics
   #encoding: tiledgrid
 render:
-  n_samples: 64
+  n_samples: 320
   n_fine: 0         
   perturb: True
   raw_noise_std: 0.

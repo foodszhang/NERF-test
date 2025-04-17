@@ -105,13 +105,14 @@ class Trainer:
         with torch.no_grad():
             self.train_dset.projs_feats = image_encoder(
                 self.train_dset.projs.view(-1, 1, 256, 256)
-            )
+            )["final_pred"]
+
             # self.train_dset.projs_feats = (
             #    self.train_dset.projs_feats - self.train_dset.projs_feats.min()
             # ) / (self.train_dset.projs_feats.max() - self.train_dset.projs_feats.min())
             self.eval_dset.projs_feats = image_encoder(
                 self.eval_dset.projs.view(-1, 1, 256, 256)
-            )
+            )["final_pred"]
             self.eval_dset.projs_feats = self.eval_dset.projs_feats.reshape(
                 1, *self.eval_dset.projs_feats.shape
             )

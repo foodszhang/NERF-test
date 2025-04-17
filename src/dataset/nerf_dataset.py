@@ -186,8 +186,8 @@ class NerfDataset(Dataset):
         self.near, self.far = self.get_near_far(self.geo)
         self.n_views = self.cfg["n_views"]
         self.device = device
-        self.window_size = [8, 8]
-        self.window_num = 16
+        self.window_size = [32, 32]
+        self.window_num = 2
         self.voxels = torch.tensor(
             self.get_voxels(self.geo), dtype=torch.float32, device=device
         )
