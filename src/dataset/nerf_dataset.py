@@ -14,6 +14,46 @@ import skimage as ski
 from src.utils import read_nifti, coord_to_dif_base
 
 
+def proj_window_partition(x, window_size):
+    """
+    x: [256, 256]
+    return out: [8*8, 32, 32], where n = window_size[0]*window_size[1] is the length of sentence
+    然后 n, c 内部计算 self-attention ?
+    """
+    # stx()
+    h, w = x.shape  # x.shape = [256, 256], window_size = (32, 32)
+    x = x.view(
+        h // window_size[0], window_size[0], w // window_size[1], window_size[1]
+    )  # [256, 256] -> [8, 32, 8, 32]
+    windows = (
+        x.permute(0, 2, 1, 3).contiguous().view(-1, window_size[0], window_size[1])
+    )  # [8, 32, 8, 32] -> [8, 8, 32, 32] -> [64, 32, 32]
+    return windows
+
+
+"""
+    将整个像素坐标空间对应的射线 rays: [b, 256, 256, 8] 划分成 [bx8x8, 32, 32]
+"""
+
+
+def ray_window_partition(x, window_size):
+    """
+    x: [256, 256, 8]
+    return out: [8*8, 32, 32, 8],
+    """
+    # stx()
+    h, w, c = x.shape  # x.shape = [256, 256, 8], window_size = (32, 32)
+    x = x.view(
+        h // window_size[0], window_size[0], w // window_size[1], window_size[1], c
+    )  # [256, 256, 8] -> [8, 32, 8, 32, 8]
+    windows = (
+        x.permute(0, 2, 1, 3, 4)
+        .contiguous()
+        .view(-1, window_size[0], window_size[1], c)
+    )  # x: [8, 32, 8, 32, 8] -> [8, 8, 32, 32, 8] -> [64, 32, 32, 8]
+    return windows
+
+
 # 这里的各项参数代表的物理含义可以在哪查到呢？
 class ConeGeometry(object):
     """
@@ -146,11 +186,13 @@ class NerfDataset(Dataset):
         self.near, self.far = self.get_near_far(self.geo)
         self.n_views = self.cfg["n_views"]
         self.device = device
-        self.window_size = [81, 81]
+        self.window_size = [8, 8]
+        self.window_num = 16
         self.voxels = torch.tensor(
             self.get_voxels(self.geo), dtype=torch.float32, device=device
         )
-        self.angles = np.linspace(0, 180 / 180 * np.pi, self.n_views + 1)[:-1]
+        total_angles = self.cfg["total_angles"]
+        self.angles = np.linspace(0, total_angles / 180 * np.pi, self.n_views + 1)[:-1]
         # self.points = torch.tensor(self.points, dtype=torch.float32, device=device)
         points = np.mgrid[:256, :256, :256]
         points = points.astype(float) / (256 - 1)
@@ -188,7 +230,7 @@ class NerfDataset(Dataset):
             -1,
         )
         self.coords = torch.reshape(coords, [-1, 2])
-        name = self.cfg["test"][0]
+        name = self.cfg["eval"][0]
         image_path = self.cfg["image"].format(name)
         image = read_nifti(image_path)
         # image_prob = image.reshape(-1)
@@ -199,7 +241,26 @@ class NerfDataset(Dataset):
         projection_path = self.cfg["projections"].format(name)
         projections = pickle.load(open(projection_path, "rb"))
         projections = torch.tensor(projections, dtype=torch.float32, device=self.device)
+        projection_path = self.cfg["ex_projections"].format(name)
+        ex_projections = pickle.load(open(projection_path, "rb"))
+        ex_projections = torch.tensor(
+            ex_projections, dtype=torch.float32, device=self.device
+        )
         self.projs = projections
+        self.ex_projs = ex_projections
+        self.angles = np.linspace(0, total_angles / 180 * np.pi, self.n_views + 1)[:-1]
+        self.ex_angles = self.angles + 20 / 180 * np.pi
+        ex_rays = self.get_rays(
+            self.ex_angles, self.geo, device
+        )  # [50, 256, 256, 6] 在每一个角度下获取射线的原点和方向
+        self.ex_rays = torch.cat(
+            [
+                ex_rays,
+                torch.ones_like(ex_rays[..., :1]) * self.near,
+                torch.ones_like(ex_rays[..., :1]) * self.far,
+            ],
+            dim=-1,
+        )
         self.patch_sample = True
 
     def __len__(self):
@@ -221,19 +282,38 @@ class NerfDataset(Dataset):
             if self.patch_sample:
                 rays = self.rays[index]
                 projs = self.projs[index]  #
+                rays_window = ray_window_partition(
+                    rays, self.window_size
+                )  # [256, 256, 8] -> [64, 32, 32, 8]
+                projs_window = proj_window_partition(
+                    projs, self.window_size
+                )  # [256, 256] -> [64, 32, 32]
                 projs_shape = projs.shape
-                hw = (self.window_size[0] - 1) // 2
-                x, y = np.random.randint(hw, projs_shape[0] - hw), np.random.randint(
-                    hw, projs_shape[0] - hw
-                )
-                projs_window = projs[x - hw : x + hw, y - hw : y + hw]
-                rays_window = rays[x - hw : x + hw, y - hw : y + hw]
-
+                projs_window_valid_indx = (projs_window > 0).sum(dim=-1).sum(
+                    dim=-1
+                ) == self.window_size[0] * self.window_size[1]
                 # 选取 window_inds
+                select_inds_window = np.random.choice(
+                    projs_window_valid_indx.shape[0],
+                    size=[self.window_num],
+                    replace=False,
+                )  # 从 0 ~ 64-1 中选取 window_num 个值
+
+                projs_window_select = projs_window[select_inds_window]  # [36, 32, 32]
+                rays_window_select = rays_window[select_inds_window]  # [36, 32, 32, 8]
+
+                # selected_nei_rays_window = [selected.reshape(-1,8) for selected in neighbors_rays_window_select] # [1, 32, 32, 8]
+                # 选取 window_inds
+                # out = {
+                #    "projs": self.projs,
+                #    "rays": rays_window_select,
+                #    "projs_pts": projs_window_select,
+                #    "projs_feats": self.projs_feats,
+                # }
                 out = {
                     "projs": self.projs,
-                    "rays": rays_window,
-                    "projs_pts": projs_window,
+                    "rays": rays_window_select,
+                    "projs_pts": projs_window_select,
                     "projs_feats": self.projs_feats,
                 }
                 return out

@@ -18,6 +18,8 @@ data["image"] = "./data/luna16/image/{}.nii.gz"
 data["projections"] = "./data/luna16/projection/{}.pickle"
 data["image_block"] = "./data/luna16/blocks/{}/block_{}.npy"
 data["blocks"] = "./data/luna16/blocks/blocks.npy"
+data["ex_projections"] = "./data/luna16/projection/{}_ex.pickle"
+data["total_angle"] = 180
 
 
 print(json.dumps(data, indent=4))

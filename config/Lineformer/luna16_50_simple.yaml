@@ -59,7 +59,7 @@ encoder:
   #encoding: sphere_harmonics
   #encoding: tiledgrid
 render:
-  n_samples: 320
+  n_samples: 64
   n_fine: 0         
   perturb: True
   raw_noise_std: 0.
@@ -79,5 +79,5 @@ train:
   #n_feat: 640 # 10 * 64
   n_feat: 40 # 10 * 64
 log:
-  i_eval: 50  # Epoch for evaluation
-  i_save: 100  # Epoch for saving
+  i_eval: 20  # Epoch for evaluation
+  i_save: 50  # Epoch for saving

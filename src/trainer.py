@@ -106,9 +106,9 @@ class Trainer:
             self.train_dset.projs_feats = image_encoder(
                 self.train_dset.projs.view(-1, 1, 256, 256)
             )
-            self.train_dset.projs_feats = (
-                self.train_dset.projs_feats - self.train_dset.projs_feats.min()
-            ) / (self.train_dset.projs_feats.max() - self.train_dset.projs_feats.min())
+            # self.train_dset.projs_feats = (
+            #    self.train_dset.projs_feats - self.train_dset.projs_feats.min()
+            # ) / (self.train_dset.projs_feats.max() - self.train_dset.projs_feats.min())
             self.eval_dset.projs_feats = image_encoder(
                 self.eval_dset.projs.view(-1, 1, 256, 256)
             )
@@ -116,9 +116,9 @@ class Trainer:
                 1, *self.eval_dset.projs_feats.shape
             )
             # normalize
-            self.eval_dset.projs_feats = (
-                self.eval_dset.projs_feats - self.eval_dset.projs_feats.min()
-            ) / (self.eval_dset.projs_feats.max() - self.eval_dset.projs_feats.min())
+            # self.eval_dset.projs_feats = (
+            #    self.eval_dset.projs_feats - self.eval_dset.projs_feats.min()
+            # ) / (self.eval_dset.projs_feats.max() - self.eval_dset.projs_feats.min())
         #
         # self.net = network().to(device)
 

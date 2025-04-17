@@ -6,6 +6,7 @@ output/
 pretrained/
 *.png
 *.ckpt
+2025*/
 
 
 

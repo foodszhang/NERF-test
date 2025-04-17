@@ -32,10 +32,32 @@ def calc_tv_loss(loss, x, k):
         k: relative weight
     """
     n1, n2, n3 = x.shape
-    tv_1 = torch.abs(x[1:, 1:, 1:] - x[:-1, 1:, 1:]).sum()
-    tv_2 = torch.abs(x[1:, 1:, 1:] - x[1:, :-1, 1:]).sum()
-    tv_3 = torch.abs(x[1:, 1:, 1:] - x[1:, 1:, :-1]).sum()
-    tv = (tv_1 + tv_2 + tv_3) / (n1 * n2 * n3)
+    tv_1 = torch.abs(x[1:, 1:, 1:] - x[:-1, 1:, 1:]).sum().type(torch.float32)
+    tv_2 = torch.abs(x[1:, 1:, 1:] - x[1:, :-1, 1:]).sum().type(torch.float32)
+    tv_3 = torch.abs(x[1:, 1:, 1:] - x[1:, 1:, :-1]).sum().type(torch.float32)
+    tv = (tv_1 + tv_2 + tv_3) / n1 / n2 / n3
+    loss["loss"] += tv * k
+    loss["loss_tv"] = tv * k
+    print("TV loss is inf", tv_1, tv_2, tv_3, n1, n2, n3, tv)
+    return loss
+
+
+def calc_tv_2d_loss(loss, x, k):
+    """
+    Anisotropic TV loss similar to the one in [1]_.
+
+    Parameters
+    ----------
+    x : :class:`torch.Tensor`
+        Tensor of which to compute the anisotropic TV w.r.t. its last two axes.
+
+    References
+    ----------
+    .. [1] https://en.wikipedia.org/wiki/Total_variation_denoising
+    """
+    dh = torch.abs(x[..., :, 1:] - x[..., :, :-1])
+    dw = torch.abs(x[..., 1:, :] - x[..., :-1, :])
+    tv = torch.sum(dh[..., :-1, :] + dw[..., :, :-1])
     loss["loss"] += tv * k
     loss["loss_tv"] = tv * k
     return loss

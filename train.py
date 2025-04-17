@@ -7,6 +7,7 @@ from tqdm import tqdm
 import argparse
 import skimage as ski
 from src.utils import coord_to_dif_base, save_nifti, coord_to_sax
+import random
 
 
 def config_parser():
@@ -34,9 +35,11 @@ from src.render import (
     render_with_image_encoder,
     run_imagenerf_network,
     render_with_dif,
+    render_with_dif_result,
+    run_imagenerf_network_with_dif,
 )
 from src.trainer import Trainer
-from src.loss import calc_mse_loss, calc_tv_loss, compute_tv_norm
+from src.loss import calc_mse_loss, calc_tv_loss, compute_tv_norm, calc_tv_2d_loss
 from src.utils import get_psnr, get_ssim, get_psnr_3d, get_ssim_3d, cast_to_image
 from pdb import set_trace as stx
 
@@ -51,6 +54,14 @@ device = torch.device("cuda")
 # stx()
 
 
+def setup_seed(seed):
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.backends.cudnn.deterministic = True
+
+
 # 从Trainer继承
 class BasicTrainer(Trainer):
     def __init__(self):
@@ -59,44 +70,56 @@ class BasicTrainer(Trainer):
         """
         super().__init__(cfg, "cuda")
         print(f"[Start] exp: {cfg['exp']['expname']}, net: Basic network")
+        setup_seed(42)
 
     def compute_loss(self, data, global_step, idx_epoch):
         # stx()
         # rays = data["rays"].reshape(-1, 8)  # [1, 1024, 8] -> [1024, 8]
 
-        projs = data["projs_pts"].reshape(
-            -1
-        )  # projection 的 ground truth [1, 1024] -> [1024]
-        # ret = render(rays, self.net, self.net_fine, **self.conf["render"])
-        b, window_size, _, _ = data["rays"].shape
-        loss = {"loss": 0.0}
-        ret = render_with_dif(
-            data["rays"],
-            data["projs_feats"],
-            self.net,
-            self.train_dset,
-            self.conf["render"]["n_samples"],
-        )
-        # stx()
-        projs_pred = ret["acc"].reshape(b, window_size, window_size)
-        calc_mse_loss(loss, data["projs_pts"], projs_pred)
-        # with torch.no_grad():
-        #    proj_f = self.image_encoder(
-        #        data["projs_pts"].view(b, 1, window_size, window_size)
-        #    )
-        #    pred_f = self.image_encoder(projs_pred.view(b, 1, window_size, window_size))
-        # p_loss = torch.nn.functional.l1_loss(proj_f, pred_f)
+        b, window_num, window_size, _, _ = data["rays"].shape
+        for i in range(window_num):
+            projs = data["projs_pts"][:, i].reshape(
+                -1
+            )  # projection 的 ground truth [1, 1024] -> [1024]
+            # ret = render(rays, self.net, self.net_fine, **self.conf["render"])
+            loss = {"loss": 0.0}
+            # ret = render_with_dif(
+            ret = render_with_dif_result(
+                data["rays"][:, i],
+                data["projs_feats"],
+                self.net,
+                self.train_dset,
+                self.conf["render"]["n_samples"],
+            )
+            # stx()
+            projs_pred = ret["acc"].reshape(b, window_size, window_size)
+            # projs_pred = ret["acc"]
+            # calc_mse_loss(loss, data["projs_pts"][:, i], projs_pred)
+            loss["loss_l1"] = torch.nn.functional.l1_loss(
+                data["projs_pts"][:, i], projs_pred
+            )
+            loss["loss"] += loss["loss_l1"]
+            # with torch.no_grad():
+            #    pred_f = self.image_encoder(
+            #        projs_pred.view(b, 1, window_size, window_size)
+            #    )
+            #    proj_f = self.image_encoder(
+            #        data["projs_pts"][:, i].view(b, 1, window_size, window_size)
+            #    )
+            # if idx_epoch > 50:
+            #    p_loss = torch.nn.functional.l1_loss(proj_f, pred_f)
 
-        # loss["loss_perceptual"] = p_loss
-        # loss["loss"] += 1e-3 * p_loss
-        image_pred = ret["raw"].reshape(
-            self.conf["render"]["n_samples"], window_size, window_size
-        )
-        calc_tv_loss(loss, image_pred, 1e-3)
+            #    loss["loss_perceptual"] = p_loss
+            #    loss["loss"] += 1e-2 * p_loss
+            #    image_pred = ret["raw"].reshape(
+            #        self.conf["render"]["n_samples"] * 3, window_size, window_size
+            #    )
+            #    calc_tv_loss(loss, image_pred, 1e-2)
 
         # Log
         for ls in loss.keys():
             self.writer.add_scalar(f"train/{ls}", loss[ls].item(), global_step)
+            print(f"loss/{ls}:", loss[ls].item())
 
         return loss["loss"]
 
@@ -105,7 +128,6 @@ class BasicTrainer(Trainer):
         Evaluation step
         """
         pts = self.eval_dset.points
-        rays = self.eval_dset.rays.reshape(-1, 8)  # [65536,8]  -> [3276800, 8]
         q = pts
         cl = []
         for other_proj_num in range(self.eval_dset.n_views):
@@ -124,7 +146,8 @@ class BasicTrainer(Trainer):
         projs = self.eval_dset.projs.reshape(-1, *self.eval_dset.projs.shape)
         N, H, W = self.eval_dset.projs.shape
         pts = coord_to_sax(pts)
-        raw = run_imagenerf_network(
+        # raw = run_imagenerf_network(
+        raw, dif_out = run_imagenerf_network_with_dif(
             pts,
             self.eval_dset.projs_feats,
             coords,
@@ -134,6 +157,7 @@ class BasicTrainer(Trainer):
         image = image.reshape(256, 256, 256)
         image_pred = raw.reshape(256, 256, 256)
         # stx()
+        # image_pred = dif_out.reshape(256, 256, 256)
 
         show_slice = 5
         show_step = image.shape[-1] // show_slice
@@ -148,21 +172,23 @@ class BasicTrainer(Trainer):
             )
         show_density = torch.concat(show, dim=1)
         projs_pred = []
+        rays = self.eval_dset.ex_rays.reshape(-1, 8)  # [65536,8]  -> [3276800, 8]
         for i in tqdm(
             range(0, rays.shape[0], self.n_rays)
         ):  # 每一簇射线是 n_rays ，每隔这么多射线渲染一次
             projs_pred.append(
-                render_with_dif(
+                # render_with_dif(
+                render_with_dif_result(
                     rays[i : i + self.n_rays],
                     self.eval_dset.projs_feats,
                     self.net,
-                    self.train_dset,
+                    self.eval_dset,
                     self.conf["render"]["n_samples"],
                 )["acc"]
             )
         projs_pred = torch.cat(projs_pred, 0).reshape(N, H, W)
 
-        projs = self.eval_dset.projs
+        projs = self.eval_dset.ex_projs
         loss = {
             "proj_psnr": get_psnr(projs_pred, projs),
             "proj_ssim": get_ssim(projs_pred, projs),

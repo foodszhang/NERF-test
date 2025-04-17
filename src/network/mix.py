@@ -18,9 +18,9 @@ def coord_to_dif(points):
 
 
 mlp_config = {
-    "otype": "FullyFusedMLP",
+    "otype": "CutlassMLP",
     "activation": "LeakyReLU",
-    "output_activation": "Softplus",
+    "output_activation": "ReLU",
     "n_neurons": 128,
     "n_hidden_layers": 5,
 }
@@ -70,7 +70,7 @@ class DIF_Net(nn.Module):
         self,
         num_views,
         mid_ch=4,
-        image_encoding="unet3",
+        image_encoding="unet",
         position_encoding="hashgrid",
     ):
         super().__init__()
@@ -84,9 +84,11 @@ class DIF_Net(nn.Module):
         self.position_encoder = get_encoder(position_encoding)
         self.mlp = DensityNetwork_debug(mid_ch * num_views)
 
-    def forward(self, data, eval_npoint=10240, use_feat=False):
+    def forward(self, data, eval_npoint=10240, with_feat=False):
         # projection encoding
-        if use_feat:
+        if with_feat:
+            proj_feats = [data["proj_feats"]]
+        else:
             projs = data["projections"]  # B, M, C, W, H
             b, m, w, h = projs.shape
             projs = projs.reshape(b * m, 1, w, h)  # B', C, W, H
@@ -103,8 +105,6 @@ class DIF_Net(nn.Module):
             for i in range(len(proj_feats)):
                 _, c_, w_, h_ = proj_feats[i].shape
                 proj_feats[i] = proj_feats[i].reshape(b, m, c_, w_, h_)  # B, M, C, W, H
-        else:
-            proj_feats = data["proj_feats"]
 
         # point-wise forward
         total_npoint = data["proj_pts"].shape[2]
@@ -207,8 +207,11 @@ class ImageNerfNetwork(nn.Module):
         # Linear layers
         self.feat_dim = feat_dim
         # self.total_dim = 128
-        self.total_dim = feat_dim + 32
-        # self.mlp = DensityNetwork_debug(feat_dim + 32)
+        self.total_dim = feat_dim + 32 + 10
+        # self.total_dim = 32 + 10
+        # self.total_dim = 32
+        # self.mlp = DensityNetwork_debug(self.total_dim, num_layers=5, hidden_dim=128)
+        # self.mlp = DensityNetwork_debug(self.total_dim, num_layers=5, hidden_dim=128)
         self.mlp = tcnn.Network(self.total_dim, 1, mlp_config)
         # self.feature_mix_layer = CompactBilinearPooling(
         #    self.feat_dim, 32, self.total_dim, sum_pool=False
@@ -218,10 +221,7 @@ class ImageNerfNetwork(nn.Module):
         net_width = 256
         self.first_layer = nn.Sequential(nn.Linear(32, net_width))
         for i in range(5):
-            if i == 0:
-                z_linears.append(nn.Linear(40, net_width))
-            else:
-                z_linears.append(nn.Linear(net_width, net_width))
+            z_linears.append(nn.Linear(40, net_width))
             mlps.append(
                 nn.Sequential(
                     nn.Linear(net_width, net_width),
@@ -232,7 +232,7 @@ class ImageNerfNetwork(nn.Module):
             )
         self.z_linears = nn.ModuleList(z_linears)
         self.mlps = nn.ModuleList(mlps)
-        self.final_layer = nn.Linear(net_width, 4)
+        self.final_layer = nn.Linear(net_width, 1)
 
     def forward(self, x):
         # stx()
@@ -269,10 +269,22 @@ class ImageNerfNetwork(nn.Module):
         # outputs = self.first_layer(pos_feats)
         # for idx in range(5):
         #    resnet_zs = self.z_linears[idx](p_feats)
-        #    outputs = pos_feats + resnet_zs
+        #    outputs = outputs + resnet_zs
         #    outputs = self.mlps[idx](outputs) + outputs
 
-        p_feats = torch.cat([pos_feats, p_feats], dim=2)
+        # outputs = self.final_layer(outputs)
+        # c = torch.relu(outputs)
+        # return c
+        if "dif_out" in x:
+            dif_out = x["dif_out"].permute(0, 2, 1)
+            dif_out = torch.cat([dif_out for i in range(10)], dim=2)
+            p_feats = torch.cat([pos_feats, p_feats, dif_out], dim=2)
+            # p_feats = torch.cat([pos_feats, dif_out], dim=2)
+            # p_feats = dif_out
+        else:
+            p_feats = torch.cat([pos_feats, p_feats], dim=2)
+
+        # p_feats = pos_feats
         # p_feats = self.norm(p_feats)
         # p_feats = self.feature_mix_layer(
         #    p_feats,

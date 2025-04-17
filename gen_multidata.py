@@ -5,7 +5,6 @@ from tigre.utilities.geometry import Geometry
 from tigre.utilities import gpu
 import numpy as np
 import yaml
-import SimpleITK as sitk
 
 import pickle
 import scipy.io
@@ -13,6 +12,7 @@ import scipy.ndimage.interpolation
 from tigre.utilities import CTnoise
 
 import skimage as ski
+import SimpleITK as sitk
 import cv2
 
 import argparse
@@ -247,16 +247,24 @@ def generator(name, data_dir, configPath, result_dir, show=False):
     projections = tigre.Ax(np.transpose(img, (2, 1, 0)).copy(), geo, data["angles"])[
         :, ::-1, :
     ]
+    data["ex_angles"] = data["angles"] + 20 / 180 * np.pi
+    external_projections = tigre.Ax(
+        np.transpose(img, (2, 1, 0)).copy(), geo, data["ex_angles"]
+    )[:, ::-1, :]
     with open(osp.join(projection_result_dir, f"{name}.pickle"), "wb") as handle:
         pickle.dump(projections, handle, pickle.HIGHEST_PROTOCOL)
+    with open(osp.join(projection_result_dir, f"{name}_ex.pickle"), "wb") as handle:
+        pickle.dump(external_projections, handle, pickle.HIGHEST_PROTOCOL)
     if show:
         save_dir_train_ct = osp.join(result_dir, "show_vis_train_ct/")
         save_dir_train_proj = osp.join(result_dir, "show_vis_train_proj/")
         save_dir_vali_proj = osp.join(result_dir, "show_vis_vali_proj/")
+        save_dir_vali_ex_proj = osp.join(result_dir, "show_vis_vali_ex_proj/")
 
         os.makedirs(save_dir_train_ct, exist_ok=True)
         os.makedirs(save_dir_train_proj, exist_ok=True)
         os.makedirs(save_dir_vali_proj, exist_ok=True)
+        os.makedirs(save_dir_vali_ex_proj, exist_ok=True)
         # stx()
         """
             img: [256, 256, 128]
@@ -268,6 +276,7 @@ def generator(name, data_dir, configPath, result_dir, show=False):
         show_num = projections.shape[0] // show_step
         show_image_train_ct = img[..., ::show_step]
         show_dir_train_proj = projections[::show_step, ...]
+        show_dir_vali_ex_proj = external_projections[::show_step, ...]
         # show_image = np.concatenate(show_image, axis=0)
 
         # stx()
@@ -284,6 +293,12 @@ def generator(name, data_dir, configPath, result_dir, show=False):
                 (show_dir_train_proj[i, ...] * 255 / show_dir_train_proj.max()).astype(
                     np.uint8
                 ),
+            )
+            iio.imwrite(
+                save_dir_vali_ex_proj + f"projs_{name}_" + str(i) + ".png",
+                (
+                    show_dir_vali_ex_proj[i, ...] * 255 / show_dir_vali_ex_proj.max()
+                ).astype(np.uint8),
             )
     return data
 
