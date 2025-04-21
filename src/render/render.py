@@ -244,7 +244,7 @@ def run_imagenerf_network(
                 "projs_feats": projs_feats,
                 "proj_pts": proj_pts[..., left:right, :],
             },
-            itervals=itervals,
+            t=itervals,
         )
         nerf_list.append(nerf_out)
 
