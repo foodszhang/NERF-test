@@ -202,8 +202,11 @@ class ImageNerfNetwork(nn.Module):
         self.skips = skips
         self.in_dim = feat_dim
         self.bound = bound
+
         # self.encoding = get_encoder("hashgrid")
         self.encoding = get_encoder("frequency")
+        self.L = 6
+        self.T = 200
         # self.encoding = tcnn.Encoding(3, encoding_config)
         # Linear layers
         self.feat_dim = feat_dim
@@ -235,7 +238,7 @@ class ImageNerfNetwork(nn.Module):
         self.mlps = nn.ModuleList(mlps)
         self.final_layer = nn.Linear(net_width, 1)
 
-    def forward(self, x):
+    def forward(self, x, t):
         # stx()
         """
         input: (N_rays x N_samples, 3)
@@ -248,17 +251,17 @@ class ImageNerfNetwork(nn.Module):
         n_view = m
         # 1. query view-specific features
         p_list = []
-        for i in range(n_view):
-            f_list = []
-            for j in range(c):
-                feat = proj_feats[:, i, j, ...]  # B, C, W, H
-                feat = feat.reshape(1, *feat.shape)
-                p = x["proj_pts"][:, i, ...]  # B, N, 2
-                p_feats = index_2d(feat, p)  # B, C, N
-                f_list.append(p_feats)
-            p_feats = torch.cat(f_list, dim=1)
-            p_list.append(p_feats)
-        p_feats = torch.cat(p_list, dim=1)  # B, C, N, M
+        # for i in range(n_view):
+        #    f_list = []
+        #    for j in range(c):
+        #        feat = proj_feats[:, i, j, ...]  # B, C, W, H
+        #        feat = feat.reshape(1, *feat.shape)
+        #        p = x["proj_pts"][:, i, ...]  # B, N, 2
+        #        p_feats = index_2d(feat, p)  # B, C, N
+        #        f_list.append(p_feats)
+        #    p_feats = torch.cat(f_list, dim=1)
+        #    p_list.append(p_feats)
+        # p_feats = torch.cat(p_list, dim=1)  # B, C, N, M
         b, n, c = pts.shape
         pts = pts.reshape(-1, c)
         # p_feats = (p_feats - p_feats.min()) / (p_feats.max() - p_feats.min())
@@ -266,7 +269,7 @@ class ImageNerfNetwork(nn.Module):
         # pos_feats = (pos_feats - pos_feats.min()) / (pos_feats.max() - pos_feats.min())
         pos_feats = pos_feats.float()
         pos_feats = pos_feats.reshape(b, n, -1)
-        p_feats = p_feats.permute(0, 2, 1)
+        # p_feats = p_feats.permute(0, 2, 1)
         # outputs = self.first_layer(pos_feats)
         # for idx in range(5):
         #    resnet_zs = self.z_linears[idx](p_feats)
@@ -284,6 +287,7 @@ class ImageNerfNetwork(nn.Module):
         #    # p_feats = dif_out
         # else:
         #    p_feats = torch.cat([pos_feats, p_feats], dim=2)
+        pos_feats[int(t / self.T * self.L) * 3 + 3 :] = 0
 
         p_feats = pos_feats
         # p_feats = self.norm(p_feats)

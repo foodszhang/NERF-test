@@ -90,6 +90,7 @@ class BasicTrainer(Trainer):
                 self.net,
                 self.train_dset,
                 self.conf["render"]["n_samples"],
+                itervals=idx_epoch,
             )
             # stx()
             projs_pred = ret["acc"].reshape(b, window_size, window_size)
@@ -99,17 +100,17 @@ class BasicTrainer(Trainer):
                 data["projs_pts"][:, i], projs_pred
             )
             loss["loss"] += loss["loss_l1"]
-            with torch.no_grad():
-                pred_f = self.image_encoder(
-                    projs_pred.view(b, 1, window_size, window_size)
-                )["final_pred"]
-                proj_f = self.image_encoder(
-                    data["projs_pts"][:, i].view(b, 1, window_size, window_size)
-                )["final_pred"]
-            p_loss = torch.nn.functional.l1_loss(proj_f, pred_f)
+            # with torch.no_grad():
+            #    pred_f = self.image_encoder(
+            #        projs_pred.view(b, 1, window_size, window_size)
+            #    )["final_pred"]
+            #    proj_f = self.image_encoder(
+            #        data["projs_pts"][:, i].view(b, 1, window_size, window_size)
+            #    )["final_pred"]
+            # p_loss = torch.nn.functional.l1_loss(proj_f, pred_f)
 
-            loss["loss_perceptual"] = p_loss
-            loss["loss"] += 1e-2 * p_loss
+            # loss["loss_perceptual"] = p_loss
+            # loss["loss"] += 1e-2 * p_loss
             # if idx_epoch > 50:
             #    image_pred = ret["raw"].reshape(
             #        self.conf["render"]["n_samples"] * 3, window_size, window_size
@@ -119,7 +120,7 @@ class BasicTrainer(Trainer):
         # Log
         for ls in loss.keys():
             self.writer.add_scalar(f"train/{ls}", loss[ls].item(), global_step)
-            print(f"loss/{ls}:", loss[ls].item())
+            # print(f"loss/{ls}:", loss[ls].item())
 
         return loss["loss"]
 
@@ -147,11 +148,18 @@ class BasicTrainer(Trainer):
         N, H, W = self.eval_dset.projs.shape
         pts = coord_to_sax(pts)
         # raw = run_imagenerf_network(
-        raw, dif_out = run_imagenerf_network_with_dif(
+        # raw, dif_out = run_imagenerf_network_with_dif(
+        #    pts,
+        #    self.eval_dset.projs_feats,
+        #    coords,
+        #    self.net,
+        # )  # run_network 输出衰减系数μ
+        raw, dif_out = run_imagenerf_network(
             pts,
             self.eval_dset.projs_feats,
             coords,
             self.net,
+            itervals=idx_epoch,
         )  # run_network 输出衰减系数μ
         image = self.eval_dset.image
         image = image.reshape(256, 256, 256)

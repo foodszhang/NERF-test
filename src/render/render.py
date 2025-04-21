@@ -36,7 +36,7 @@ def get_pts(rays, n_samples, perturb=None):
     return pts, z_vals, rays_o, rays_d
 
 
-def render_with_dif(rays, projs_feats, net, dataset, n_samples):
+def render_with_dif(rays, projs_feats, net, dataset, n_samples, itervals=0):
     net_fine = True
     n_fine = 2 * n_samples
     rays = rays.reshape(-1, 8)
@@ -93,12 +93,19 @@ def render_with_dif(rays, projs_feats, net, dataset, n_samples):
         pts = pts.reshape(1, *pts.shape)
         coords = coords.reshape(1, *coords.shape)
         proj_pt = coords
-        raw = run_imagenerf_network_with_dif(
+        # raw, _ = run_imagenerf_network_with_dif(
+        #    pts,
+        #    projs_feats,
+        #    proj_pt,
+        #    net,
+        # )  # run_network 输出衰减系数μ
+        raw = run_imagenerf_network(
             pts,
             projs_feats,
             proj_pt,
             net,
-        )  # run_network 输出衰减系数μ
+            itervals=itervals,
+        )
         raw = raw.reshape(n_rays, -1, 1)
         acc, _ = raw2outputs(raw, z_vals, rays_d)
 
@@ -116,7 +123,7 @@ def render_with_dif(rays, projs_feats, net, dataset, n_samples):
     return ret
 
 
-def render_with_image_encoder(rays, projs_feats, net, dataset, n_samples):
+def render_with_image_encoder(rays, projs_feats, net, dataset, n_samples, itervals=0):
     rays = rays.reshape(-1, 8)
     pts, z_vals, rays_o, rays_d = get_pts(rays, n_samples, True)
     bound = 0.3
@@ -134,11 +141,8 @@ def render_with_image_encoder(rays, projs_feats, net, dataset, n_samples):
     coords = coords.reshape(1, *coords.shape)
     proj_pt = coords
 
-    raw = run_imagenerf_network(
-        pts,
-        projs_feats,
-        proj_pt,
-        net,
+    raw, _ = run_imagenerf_network(
+        pts, projs_feats, proj_pt, net, itervals=itervals
     )  # run_network 输出衰减系数μ
     raw = raw.reshape(n_rays, -1, 1)
     acc, weights = raw2outputs(raw, z_vals, rays_d)  # acc 和 weights 各自的含义是？
@@ -167,12 +171,18 @@ def render_with_dif_result(rays, projs_feats, net, dataset, n_samples):
     coords = coords.reshape(1, *coords.shape)
     proj_pt = coords
 
-    raw, _ = run_imagenerf_network_with_dif(
+    # raw, _ = run_imagenerf_network_with_dif(
+    #    pts,
+    #    projs_feats,
+    #    proj_pt,
+    #    net,
+    # )  # run_network 输出衰减系数μ
+    raw = run_imagenerf_network(
         pts,
         projs_feats,
         proj_pt,
         net,
-    )  # run_network 输出衰减系数μ
+    )
     raw = raw.reshape(n_rays, -1, 1)
     acc, weights = raw2outputs(raw, z_vals, rays_d)  # acc 和 weights 各自的含义是？
     ret = {"acc": acc, "pts": pts, "raw": raw, "weights": weights}
@@ -209,7 +219,9 @@ def run_network(inputs, fn, netchunk):
     return out
 
 
-def run_imagenerf_network(pts, projs_feats, proj_pts, imagenerf_net, netchunk=10240):
+def run_imagenerf_network(
+    pts, projs_feats, proj_pts, imagenerf_net, netchunk=10240, itervals=0
+):
     """
     Prepares inputs and applies network "fn".
     inputs: [N_rays, N_sample, 3] - [1024, 192, 3]  训练的时候
@@ -231,7 +243,8 @@ def run_imagenerf_network(pts, projs_feats, proj_pts, imagenerf_net, netchunk=10
                 "pts": pts[..., left:right, :],
                 "projs_feats": projs_feats,
                 "proj_pts": proj_pts[..., left:right, :],
-            }
+            },
+            itervals=itervals,
         )
         nerf_list.append(nerf_out)
 
