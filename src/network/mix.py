@@ -168,7 +168,7 @@ class NerfNetwork(nn.Module):
             "interpolation": "Linear",
         }
         # self.encoding = tcnn.Encoding(3, encoding_config)
-        self.encoding = get_encoder("hashgrid")
+        self.encoding = get_encoder("frequency")
         # self.mlp = DensityNetwork_debug(32)
 
     def forward(self, x):
@@ -202,14 +202,15 @@ class ImageNerfNetwork(nn.Module):
         self.skips = skips
         self.in_dim = feat_dim
         self.bound = bound
-        self.encoding = get_encoder("hashgrid")
+        # self.encoding = get_encoder("hashgrid")
+        self.encoding = get_encoder("frequency")
         # self.encoding = tcnn.Encoding(3, encoding_config)
         # Linear layers
         self.feat_dim = feat_dim
         # self.total_dim = 128
-        self.total_dim = feat_dim + 32 + 10
+        # self.total_dim = feat_dim + 32 + 10
         # self.total_dim = 32 + 10
-        # self.total_dim = 32
+        self.total_dim = 32
         # self.mlp = DensityNetwork_debug(self.total_dim, num_layers=5, hidden_dim=128)
         # self.mlp = DensityNetwork_debug(self.total_dim, num_layers=5, hidden_dim=128)
         self.mlp = tcnn.Network(self.total_dim, 1, mlp_config)
@@ -275,16 +276,16 @@ class ImageNerfNetwork(nn.Module):
         # outputs = self.final_layer(outputs)
         # c = torch.relu(outputs)
         # return c
-        if "dif_out" in x:
-            dif_out = x["dif_out"].permute(0, 2, 1)
-            dif_out = torch.cat([dif_out for i in range(10)], dim=2)
-            p_feats = torch.cat([pos_feats, p_feats, dif_out], dim=2)
-            # p_feats = torch.cat([pos_feats, dif_out], dim=2)
-            # p_feats = dif_out
-        else:
-            p_feats = torch.cat([pos_feats, p_feats], dim=2)
+        # if "dif_out" in x:
+        #    dif_out = x["dif_out"].permute(0, 2, 1)
+        #    dif_out = torch.cat([dif_out for i in range(10)], dim=2)
+        #    p_feats = torch.cat([pos_feats, p_feats, dif_out], dim=2)
+        #    # p_feats = torch.cat([pos_feats, dif_out], dim=2)
+        #    # p_feats = dif_out
+        # else:
+        #    p_feats = torch.cat([pos_feats, p_feats], dim=2)
 
-        # p_feats = pos_feats
+        p_feats = pos_feats
         # p_feats = self.norm(p_feats)
         # p_feats = self.feature_mix_layer(
         #    p_feats,
