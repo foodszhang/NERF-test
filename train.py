@@ -76,7 +76,13 @@ class BasicTrainer(Trainer):
         # stx()
         # rays = data["rays"].reshape(-1, 8)  # [1, 1024, 8] -> [1024, 8]
 
-        b, window_num, window_size, _, _ = data["rays"].shape
+        if len(data["rays"].shape) == 5:
+            b, window_num, window_size, _, _ = data["rays"].shape
+        else:
+            b, _, _ = data["rays"].shape
+            window_num = 1
+            window_size = 0
+
         for i in range(window_num):
             projs = data["projs_pts"][:, i].reshape(
                 -1
@@ -93,7 +99,12 @@ class BasicTrainer(Trainer):
                 itervals=idx_epoch,
             )
             # stx()
-            projs_pred = ret["acc"].reshape(b, window_size, window_size)
+            #
+            if window_size > 0:
+                projs_pred = ret["acc"].reshape(b, window_size, window_size)
+            else:
+                projs_pred = ret["acc"].reshape(b, -1)
+
             # projs_pred = ret["acc"]
             # calc_mse_loss(loss, data["projs_pts"][:, i], projs_pred)
             loss["loss_l1"] = torch.nn.functional.l1_loss(
@@ -154,7 +165,7 @@ class BasicTrainer(Trainer):
         #    coords,
         #    self.net,
         # )  # run_network 输出衰减系数μ
-        raw, dif_out = run_imagenerf_network(
+        raw = run_imagenerf_network(
             pts,
             self.eval_dset.projs_feats,
             coords,

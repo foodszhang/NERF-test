@@ -20,9 +20,9 @@ def coord_to_dif(points):
 mlp_config = {
     "otype": "CutlassMLP",
     "activation": "LeakyReLU",
-    "output_activation": "ReLU",
-    "n_neurons": 128,
-    "n_hidden_layers": 5,
+    "output_activation": "SoftPlus",
+    "n_neurons": 256,
+    "n_hidden_layers": 6,
 }
 encoding_config = {
     "otype": "Grid",
@@ -70,7 +70,7 @@ class DIF_Net(nn.Module):
         self,
         num_views,
         mid_ch=4,
-        image_encoding="unet3",
+        image_encoding="unet",
         position_encoding="hashgrid",
     ):
         super().__init__()
@@ -203,17 +203,18 @@ class ImageNerfNetwork(nn.Module):
         self.in_dim = feat_dim
         self.bound = bound
 
-        # self.encoding = get_encoder("hashgrid")
-        self.encoding = get_encoder("frequency")
-        self.L = 6
-        self.T = 200
+        self.encoding = get_encoder("hashgrid")
+        # self.encoding = get_encoder("frequency")
+        self.L = 16
+        self.T = 400
         # self.encoding = tcnn.Encoding(3, encoding_config)
         # Linear layers
         self.feat_dim = feat_dim
         # self.total_dim = 128
         # self.total_dim = feat_dim + 32 + 10
+        self.total_dim = feat_dim + 32
         # self.total_dim = 32 + 10
-        self.total_dim = 32
+        ##self.total_dim = 32
         # self.mlp = DensityNetwork_debug(self.total_dim, num_layers=5, hidden_dim=128)
         # self.mlp = DensityNetwork_debug(self.total_dim, num_layers=5, hidden_dim=128)
         self.mlp = tcnn.Network(self.total_dim, 1, mlp_config)
@@ -251,17 +252,17 @@ class ImageNerfNetwork(nn.Module):
         n_view = m
         # 1. query view-specific features
         p_list = []
-        # for i in range(n_view):
-        #    f_list = []
-        #    for j in range(c):
-        #        feat = proj_feats[:, i, j, ...]  # B, C, W, H
-        #        feat = feat.reshape(1, *feat.shape)
-        #        p = x["proj_pts"][:, i, ...]  # B, N, 2
-        #        p_feats = index_2d(feat, p)  # B, C, N
-        #        f_list.append(p_feats)
-        #    p_feats = torch.cat(f_list, dim=1)
-        #    p_list.append(p_feats)
-        # p_feats = torch.cat(p_list, dim=1)  # B, C, N, M
+        for i in range(n_view):
+            f_list = []
+            for j in range(c):
+                feat = proj_feats[:, i, j, ...]  # B, C, W, H
+                feat = feat.reshape(1, *feat.shape)
+                p = x["proj_pts"][:, i, ...]  # B, N, 2
+                p_feats = index_2d(feat, p)  # B, C, N
+                f_list.append(p_feats)
+            p_feats = torch.cat(f_list, dim=1)
+            p_list.append(p_feats)
+        p_feats = torch.cat(p_list, dim=1)  # B, C, N, M
         b, n, c = pts.shape
         pts = pts.reshape(-1, c)
         # p_feats = (p_feats - p_feats.min()) / (p_feats.max() - p_feats.min())
@@ -269,7 +270,7 @@ class ImageNerfNetwork(nn.Module):
         # pos_feats = (pos_feats - pos_feats.min()) / (pos_feats.max() - pos_feats.min())
         pos_feats = pos_feats.float()
         pos_feats = pos_feats.reshape(b, n, -1)
-        # p_feats = p_feats.permute(0, 2, 1)
+        p_feats = p_feats.permute(0, 2, 1)
         # outputs = self.first_layer(pos_feats)
         # for idx in range(5):
         #    resnet_zs = self.z_linears[idx](p_feats)
@@ -287,9 +288,10 @@ class ImageNerfNetwork(nn.Module):
         #    # p_feats = dif_out
         # else:
         #    p_feats = torch.cat([pos_feats, p_feats], dim=2)
-        pos_feats[int(t / self.T * self.L) * 3 + 3 :] = 0
+        # pos_feats[int(t / self.T * self.L) * 2 + 2 :] = 0
 
-        p_feats = pos_feats
+        p_feats = torch.cat([pos_feats, p_feats], dim=2)
+        # p_feats = pos_feats
         # p_feats = self.norm(p_feats)
         # p_feats = self.feature_mix_layer(
         #    p_feats,

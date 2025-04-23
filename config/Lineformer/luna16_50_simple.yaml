@@ -65,7 +65,7 @@ render:
   raw_noise_std: 0.
   netchunk: 409600  # batchsize of points
 train:
-  epoch: 200
+  epoch: 1000
   n_batch: 1
   n_rays: 1024
   lrate: 0.001
