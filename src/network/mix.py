@@ -211,8 +211,9 @@ class ImageNerfNetwork(nn.Module):
         # Linear layers
         self.feat_dim = feat_dim
         # self.total_dim = 128
-        # self.total_dim = feat_dim + 32 + 10
-        self.total_dim = feat_dim + 32
+        self.embed = nn.Linear(1, 16)
+        self.total_dim = feat_dim + 32 + 16
+        # self.total_dim = feat_dim + 32
         # self.total_dim = 32 + 10
         ##self.total_dim = 32
         # self.mlp = DensityNetwork_debug(self.total_dim, num_layers=5, hidden_dim=128)
@@ -282,13 +283,13 @@ class ImageNerfNetwork(nn.Module):
         # return c
         if "dif_out" in x:
             dif_out = x["dif_out"].permute(0, 2, 1)
-            dif_out = torch.cat([dif_out for i in range(10)], dim=2)
+            dif_out = self.embed(dif_out)
             p_feats = torch.cat([pos_feats, p_feats, dif_out], dim=2)
             # p_feats = torch.cat([pos_feats, dif_out], dim=2)
             # p_feats = dif_out
         else:
             p_feats = torch.cat([pos_feats, p_feats], dim=2)
-        pos_feats[int(t / self.T * self.L) * 2 + 2 :] = 0
+        # pos_feats[int(t / self.T * self.L) * 2 + 2 :] = 0
 
         # p_feats = torch.cat([pos_feats, p_feats], dim=2)
         # p_feats = pos_feats

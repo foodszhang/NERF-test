@@ -220,8 +220,8 @@ def generator(name, data_dir, configPath, result_dir, show=False):
         matPath,
         data["nVoxel"],
     )
-    # window = (-800, 1000)
-    window = (-400, 500)
+    window = (-800, 1000)
+    # window = (-400, 500)
     img = convert_to_attenuation(img, data["rescale_slope"], data["rescale_intercept"])
     window = (
         convert_to_attenuation(
