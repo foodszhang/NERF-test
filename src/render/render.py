@@ -93,19 +93,19 @@ def render_with_dif(rays, projs_feats, net, dataset, n_samples, itervals=0):
         pts = pts.reshape(1, *pts.shape)
         coords = coords.reshape(1, *coords.shape)
         proj_pt = coords
-        # raw, _ = run_imagenerf_network_with_dif(
-        #    pts,
-        #    projs_feats,
-        #    proj_pt,
-        #    net,
-        # )  # run_network 输出衰减系数μ
-        raw = run_imagenerf_network(
+        raw, _ = run_imagenerf_network_with_dif(
             pts,
             projs_feats,
             proj_pt,
             net,
-            itervals=itervals,
-        )
+        )  # run_network 输出衰减系数μ
+        # raw = run_imagenerf_network(
+        #    pts,
+        #    projs_feats,
+        #    proj_pt,
+        #    net,
+        #    itervals=itervals,
+        # )
         raw = raw.reshape(n_rays, -1, 1)
         acc, _ = raw2outputs(raw, z_vals, rays_d)
 

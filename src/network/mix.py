@@ -280,17 +280,17 @@ class ImageNerfNetwork(nn.Module):
         # outputs = self.final_layer(outputs)
         # c = torch.relu(outputs)
         # return c
-        # if "dif_out" in x:
-        #    dif_out = x["dif_out"].permute(0, 2, 1)
-        #    dif_out = torch.cat([dif_out for i in range(10)], dim=2)
-        #    p_feats = torch.cat([pos_feats, p_feats, dif_out], dim=2)
-        #    # p_feats = torch.cat([pos_feats, dif_out], dim=2)
-        #    # p_feats = dif_out
-        # else:
-        #    p_feats = torch.cat([pos_feats, p_feats], dim=2)
-        # pos_feats[int(t / self.T * self.L) * 2 + 2 :] = 0
+        if "dif_out" in x:
+            dif_out = x["dif_out"].permute(0, 2, 1)
+            dif_out = torch.cat([dif_out for i in range(10)], dim=2)
+            p_feats = torch.cat([pos_feats, p_feats, dif_out], dim=2)
+            # p_feats = torch.cat([pos_feats, dif_out], dim=2)
+            # p_feats = dif_out
+        else:
+            p_feats = torch.cat([pos_feats, p_feats], dim=2)
+        pos_feats[int(t / self.T * self.L) * 2 + 2 :] = 0
 
-        p_feats = torch.cat([pos_feats, p_feats], dim=2)
+        # p_feats = torch.cat([pos_feats, p_feats], dim=2)
         # p_feats = pos_feats
         # p_feats = self.norm(p_feats)
         # p_feats = self.feature_mix_layer(

@@ -159,19 +159,19 @@ class BasicTrainer(Trainer):
         N, H, W = self.eval_dset.projs.shape
         pts = coord_to_sax(pts)
         # raw = run_imagenerf_network(
-        # raw, dif_out = run_imagenerf_network_with_dif(
-        #    pts,
-        #    self.eval_dset.projs_feats,
-        #    coords,
-        #    self.net,
-        # )  # run_network 输出衰减系数μ
-        raw = run_imagenerf_network(
+        raw, dif_out = run_imagenerf_network_with_dif(
             pts,
             self.eval_dset.projs_feats,
             coords,
             self.net,
-            itervals=idx_epoch,
         )  # run_network 输出衰减系数μ
+        # raw = run_imagenerf_network(
+        #    pts,
+        #    self.eval_dset.projs_feats,
+        #    coords,
+        #    self.net,
+        #    itervals=idx_epoch,
+        # )  # run_network 输出衰减系数μ
         image = self.eval_dset.image
         image = image.reshape(256, 256, 256)
         image_pred = raw.reshape(256, 256, 256)
