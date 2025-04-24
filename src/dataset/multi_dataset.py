@@ -208,25 +208,17 @@ class MultiTIGREDataset(Dataset):
             name = self.cfg["train"][index]
             image_path = self.cfg["image"].format(name)
             image = read_nifti(image_path)
-            image_prob = image.reshape(-1)
-            image_prob = image_prob + 0.5
-            image_prob = image_prob / image_prob.sum()
             image = torch.tensor(image, dtype=torch.float32, device=self.device)
             projection_path = self.cfg["projections"].format(name)
             projections = pickle.load(open(projection_path, "rb"))
             projections = torch.tensor(
                 projections, dtype=torch.float32, device=self.device
             )
-            # projections = projections / projections.max()
-            # pts = self.voxels.reshape(-1, 3)
-            # points = self.sample_points_pdf(pts)
             b_idx = np.random.randint(len(self.blocks))
             block_values = self.load_block(name, b_idx)
             block_coords = self.blocks[b_idx]  # N, 3
             points, p_gt = self.sample_points(block_coords, block_values)
-            # q = coord_to_dif_base(points)
             q = points
-            # values = index_3d(image, points)
             cl = []
             for other_proj_num in range(self.n_views):
                 coords = self.geo.project(q, self.angles[other_proj_num])
@@ -254,12 +246,8 @@ class MultiTIGREDataset(Dataset):
             projections = torch.tensor(
                 projections, dtype=torch.float32, device=self.device
             )
-            # projections = projections / projections.max()
-            # pts = self.voxels.reshape(-1, 3)
             pts = self.points
-            # q = coord_to_dif_base(pts)
             q = pts
-            # values = index_3d(image, pts)
             cl = []
             for other_proj_num in range(self.n_views):
                 coords = self.geo.project(q, self.angles[other_proj_num])

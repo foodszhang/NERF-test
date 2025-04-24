@@ -94,22 +94,22 @@ class BasicTrainer(Trainer):
             # stx()
             projs_pred = ret["acc"].reshape(b, window_size, window_size)
             # projs_pred = ret["acc"]
-            # calc_mse_loss(loss, data["projs_pts"][:, i], projs_pred)
-            loss["loss_l1"] = torch.nn.functional.l1_loss(
-                data["projs_pts"][:, i], projs_pred
-            )
-            loss["loss"] += loss["loss_l1"]
+            calc_mse_loss(loss, data["projs_pts"][:, i], projs_pred)
+            # loss["loss_l1"] = torch.nn.functional.l1_loss(
+            #    data["projs_pts"][:, i], projs_pred
+            # )
+            # loss["loss"] += loss["loss_l1"]
             with torch.no_grad():
                 pred_f = self.image_encoder(
                     projs_pred.view(b, 1, window_size, window_size)
-                )["final_pred"]
+                )
                 proj_f = self.image_encoder(
                     data["projs_pts"][:, i].view(b, 1, window_size, window_size)
-                )["final_pred"]
+                )
             p_loss = torch.nn.functional.l1_loss(proj_f, pred_f)
 
             loss["loss_perceptual"] = p_loss
-            loss["loss"] += 1e-2 * p_loss
+            loss["loss"] += 1e-4 * p_loss
             # if idx_epoch > 50:
             #    image_pred = ret["raw"].reshape(
             #        self.conf["render"]["n_samples"] * 3, window_size, window_size
