@@ -207,7 +207,8 @@ class ImageNerfNetwork(nn.Module):
         # Linear layers
         self.feat_dim = feat_dim
         # self.total_dim = 128
-        self.total_dim = feat_dim + 2 * 32 + 32
+        # self.total_dim = feat_dim + 2 * 32 + 32
+        self.total_dim = feat_dim + 32
         # self.total_dim = 2 * 32
         # self.total_dim = 32 + 10
         # self.total_dim = 32
@@ -280,7 +281,8 @@ class ImageNerfNetwork(nn.Module):
         if "dif_out" in x:
             dif_out = x["dif_out"].permute(0, 2, 1)
             dif_out = self.embed(dif_out)
-            p_feats = torch.cat([pos_feats, p_feats, dif_out], dim=2)
+            # p_feats = torch.cat([pos_feats, p_feats, dif_out], dim=2)
+            p_feats = torch.cat([p_feats, dif_out], dim=2)
             # p_feats = torch.cat([pos_feats, dif_out], dim=2)
             # p_feats = dif_out
         else:
