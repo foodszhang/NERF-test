@@ -69,9 +69,8 @@ class DIF_Net(nn.Module):
     def __init__(
         self,
         num_views,
-        mid_ch=8,
+        mid_ch=4,
         image_encoding="unet",
-        position_encoding="hashgrid",
     ):
         super().__init__()
         if image_encoding == "unet":
@@ -81,8 +80,10 @@ class DIF_Net(nn.Module):
             self.image_encoding = "unet3"
             self.image_encoder = UNet3Plus(mid_ch, fast_up=False, use_cgm=False)
         self.image_encoder.output_dim = mid_ch
-        self.position_encoder = get_encoder(position_encoding)
-        self.mlp = DensityNetwork_debug(mid_ch * num_views)
+        # self.mlp = DensityNetwork_debug(mid_ch * num_views)
+        self.total_dim = mid_ch * num_views
+        print("66666", self.total_dim)
+        self.mlp = tcnn.Network(self.total_dim, 1, mlp_config)
 
     def forward(self, data, eval_npoint=10240, with_feat=False):
         # projection encoding
@@ -131,6 +132,7 @@ class DIF_Net(nn.Module):
     def forward_points(self, proj_feats, data):
         n_view = proj_feats[0].shape[1]
         # 1. query view-specific features
+        b = data["proj_pts"].shape[0]
         p_list = []
         for i in range(n_view):
             f_list = []
@@ -147,9 +149,11 @@ class DIF_Net(nn.Module):
         proj_feats = p_feats
 
         p_feats = p_feats.permute(0, 2, 1)
-        p_pred = self.mlp(p_feats)
-        p_pred = p_pred.permute(0, 2, 1)
-        return p_pred
+        x = [self.mlp(p_feat) for p_feat in p_feats]
+        x = torch.cat(x, dim=1)  # B, C, N, M
+        # return outputs.view(b, -1)
+        x = x.reshape(b, 1, -1)
+        return x
 
 
 class NerfNetwork(nn.Module):
@@ -192,7 +196,7 @@ class ImageNerfNetwork(nn.Module):
         self,
         bound=0.3,
         num_layers=8,
-        feat_dim=10 * 8,
+        feat_dim=10 * 4,
         hidden_dim=256,
         skips=[4],
     ):
@@ -264,10 +268,10 @@ class ImageNerfNetwork(nn.Module):
         b, n, c = pts.shape
         pts = pts.reshape(-1, c)
         # p_feats = (p_feats - p_feats.min()) / (p_feats.max() - p_feats.min())
-        pos_feats = self.encoding(pts, self.bound)
+        # pos_feats = self.encoding(pts, self.bound)
         # pos_feats = (pos_feats - pos_feats.min()) / (pos_feats.max() - pos_feats.min())
         # pos_feats = pos_feats.float()
-        pos_feats = pos_feats.reshape(b, n, -1)
+        # pos_feats = pos_feats.reshape(b, n, -1)
         p_feats = p_feats.permute(0, 2, 1)
         # outputs = self.first_layer(pos_feats)
         # for idx in range(5):
