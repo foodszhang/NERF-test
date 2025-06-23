@@ -1,8 +1,8 @@
 # Parameters to setup CT simulation.
 
 # dataset
-numTrain: 10
-numVal: 10
+numTrain: 20
+numVal: 20
 
 # System configuration
 DSD: 1500.0  # Distance Source Detector      (mm)

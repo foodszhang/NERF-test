@@ -206,19 +206,20 @@ class ImageNerfNetwork(nn.Module):
         self.skips = skips
         self.in_dim = feat_dim
         self.bound = bound
-        self.encoding = get_encoder("hashgrid", num_levels=16, level_dim=4)
+        self.encoding = get_encoder("hashgrid")
         # self.encoding = tcnn.Encoding(3, encoding_config)
         # Linear layers
         self.feat_dim = feat_dim
         # self.total_dim = 128
         # self.total_dim = feat_dim + 2 * 32 + 32
-        self.total_dim = feat_dim + 32
+        # self.total_dim = feat_dim + 32
+        self.total_dim = 32
         # self.total_dim = 2 * 32
         # self.total_dim = 32 + 10
         # self.total_dim = 32
         # self.mlp = DensityNetwork_debug(self.total_dim, num_layers=5, hidden_dim=128)
-        # self.mlp = DensityNetwork_debug(self.total_dim, num_layers=5, hidden_dim=256)
-        self.mlp = tcnn.Network(self.total_dim, 1, mlp_config)
+        self.mlp = DensityNetwork_debug(self.total_dim, num_layers=8, hidden_dim=256)
+        # self.mlp = tcnn.Network(self.total_dim, 1, mlp_config)
         # self.feature_mix_layer = CompactBilinearPooling(
         #    self.feat_dim, 32, self.total_dim, sum_pool=False
         # )
@@ -254,25 +255,25 @@ class ImageNerfNetwork(nn.Module):
         n_view = m
         # 1. query view-specific features
         p_list = []
-        for i in range(n_view):
-            f_list = []
-            for j in range(c):
-                feat = proj_feats[:, i, j, ...]  # B, C, W, H
-                feat = feat.reshape(1, *feat.shape)
-                p = x["proj_pts"][:, i, ...]  # B, N, 2
-                p_feats = index_2d(feat, p)  # B, C, N
-                f_list.append(p_feats)
-            p_feats = torch.cat(f_list, dim=1)
-            p_list.append(p_feats)
-        p_feats = torch.cat(p_list, dim=1)  # B, C, N, M
+        # for i in range(n_view):
+        #    f_list = []
+        #    for j in range(c):
+        #        feat = proj_feats[:, i, j, ...]  # B, C, W, H
+        #        feat = feat.reshape(1, *feat.shape)
+        #        p = x["proj_pts"][:, i, ...]  # B, N, 2
+        #        p_feats = index_2d(feat, p)  # B, C, N
+        #        f_list.append(p_feats)
+        #    p_feats = torch.cat(f_list, dim=1)
+        #    p_list.append(p_feats)
+        # p_feats = torch.cat(p_list, dim=1)  # B, C, N, M
         b, n, c = pts.shape
         pts = pts.reshape(-1, c)
         # p_feats = (p_feats - p_feats.min()) / (p_feats.max() - p_feats.min())
-        # pos_feats = self.encoding(pts, self.bound)
+        pos_feats = self.encoding(pts, self.bound)
         # pos_feats = (pos_feats - pos_feats.min()) / (pos_feats.max() - pos_feats.min())
         # pos_feats = pos_feats.float()
-        # pos_feats = pos_feats.reshape(b, n, -1)
-        p_feats = p_feats.permute(0, 2, 1)
+        pos_feats = pos_feats.reshape(b, n, -1)
+        # p_feats = p_feats.permute(0, 2, 1)
         # outputs = self.first_layer(pos_feats)
         # for idx in range(5):
         #    resnet_zs = self.z_linears[idx](p_feats)
@@ -282,15 +283,15 @@ class ImageNerfNetwork(nn.Module):
         # outputs = self.final_layer(outputs)
         # c = torch.relu(outputs)
         # return c
-        if "dif_out" in x:
-            dif_out = x["dif_out"].permute(0, 2, 1)
-            dif_out = self.embed(dif_out)
-            # p_feats = torch.cat([pos_feats, p_feats, dif_out], dim=2)
-            p_feats = torch.cat([p_feats, dif_out], dim=2)
-            # p_feats = torch.cat([pos_feats, dif_out], dim=2)
-            # p_feats = dif_out
-        else:
-            p_feats = torch.cat([pos_feats, p_feats], dim=2)
+        # if "dif_out" in x:
+        #    dif_out = x["dif_out"].permute(0, 2, 1)
+        #    dif_out = self.embed(dif_out)
+        #    # p_feats = torch.cat([pos_feats, p_feats, dif_out], dim=2)
+        #    p_feats = torch.cat([p_feats, dif_out], dim=2)
+        #    # p_feats = torch.cat([pos_feats, dif_out], dim=2)
+        #    # p_feats = dif_out
+        # else:
+        #    p_feats = torch.cat([pos_feats, p_feats], dim=2)
 
         # p_feats = torch.cat([pos_feats, p_feats], dim=2)
         # p_feats = pos_feats
@@ -299,6 +300,7 @@ class ImageNerfNetwork(nn.Module):
         #    p_feats,
         #    pos_feats,
         # )
+        p_feats = pos_feats
         x = [self.mlp(p_feat) for p_feat in p_feats]
         x = torch.cat(x, dim=1)  # B, C, N, M
         # return outputs.view(b, -1)

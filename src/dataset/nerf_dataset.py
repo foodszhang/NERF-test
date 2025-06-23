@@ -61,7 +61,6 @@ class ConeGeometry(object):
     """
 
     def __init__(self, data):
-
         # VARIABLE                                          DESCRIPTION                    UNITS
         # -------------------------------------------------------------------------------------
         self.DSD = (
@@ -230,7 +229,7 @@ class NerfDataset(Dataset):
             -1,
         )
         self.coords = torch.reshape(coords, [-1, 2])
-        name = self.cfg["eval"][0]
+        name = self.cfg["test"][0]
         image_path = self.cfg["image"].format(name)
         image = read_nifti(image_path)
         # image_prob = image.reshape(-1)
@@ -498,7 +497,6 @@ class NerfDataset(Dataset):
     # 前两次旋转为对齐
     # 此处为 source_to_origin 的pose
     def angle2pose(self, DSO, angle):
-
         # 绕x轴逆时针转了-90度
         phi1 = -np.pi / 2
         R1 = np.array(
