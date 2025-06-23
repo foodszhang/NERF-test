@@ -37,7 +37,7 @@ def get_pts(rays, n_samples, perturb=None):
 
 
 def render_with_dif(rays, projs_feats, net, dataset, n_samples):
-    net_fine = True
+    net_fine = False
     n_fine = 2 * n_samples
     rays = rays.reshape(-1, 8)
     pts, z_vals, rays_o, rays_d = get_pts(rays, n_samples, True)
@@ -55,14 +55,20 @@ def render_with_dif(rays, projs_feats, net, dataset, n_samples):
     pts = pts.reshape(1, *pts.shape)
     coords = coords.reshape(1, *coords.shape)
     proj_pt = coords
-    with torch.no_grad():
-        raw = run_dif_network(
-            pts,
-            projs_feats,
-            proj_pt,
-            net.dif_net,
-            with_feat=True,
-        )  # run_network 输出衰减系数μ
+    raw, _ = run_imagenerf_network_with_dif(
+        pts,
+        projs_feats,
+        proj_pt,
+        net,
+    )  # run_network 输出衰减系数μ
+    # with torch.no_grad():
+    #    raw = run_dif_network(
+    #        pts,
+    #        projs_feats,
+    #        proj_pt,
+    #        net.dif_net,
+    #        with_feat=True,
+    #    )  # run_network 输出衰减系数μ
     raw = raw.reshape(n_rays, -1, 1)
     acc, weights = raw2outputs(raw, z_vals, rays_d)  # acc 和 weights 各自的含义是？
     ret = {"acc": acc, "pts": pts, "raw": raw, "weights": weights}

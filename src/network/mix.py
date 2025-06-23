@@ -82,7 +82,6 @@ class DIF_Net(nn.Module):
         self.image_encoder.output_dim = mid_ch
         # self.mlp = DensityNetwork_debug(mid_ch * num_views)
         self.total_dim = mid_ch * num_views
-        print("66666", self.total_dim)
         self.mlp = tcnn.Network(self.total_dim, 1, mlp_config)
 
     def forward(self, data, eval_npoint=10240, with_feat=False):
@@ -206,7 +205,7 @@ class ImageNerfNetwork(nn.Module):
         self.skips = skips
         self.in_dim = feat_dim
         self.bound = bound
-        self.encoding = get_encoder("hashgrid")
+        self.encoding = get_encoder("hashgrid", num_levels=16, level_dim=2)
         # self.encoding = tcnn.Encoding(3, encoding_config)
         # Linear layers
         self.feat_dim = feat_dim
