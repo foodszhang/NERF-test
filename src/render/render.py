@@ -265,28 +265,29 @@ def run_imagenerf_network_with_dif(
     for i in range(n_batch):
         left = i * netchunk
         right = min((i + 1) * netchunk, total_npoint)
-        dif_out = imagenerf_net.dif_net(
-            {
-                "pts": pts[..., left:right, :],
-                "proj_feats": projs_feats,
-                "proj_pts": proj_pts[..., left:right, :],
-            },
-            with_feat=True,
-        )
+        # dif_out = imagenerf_net.dif_net(
+        #    {
+        #        "pts": pts[..., left:right, :],
+        #        "proj_feats": projs_feats,
+        #        "proj_pts": proj_pts[..., left:right, :],
+        #    },
+        #    with_feat=True,
+        # )
         nerf_out = imagenerf_net(
             {
                 "pts": pts[..., left:right, :],
                 "projs_feats": projs_feats,
                 "proj_pts": proj_pts[..., left:right, :],
-                "dif_out": dif_out,
+                # "dif_out": dif_out,
             }
         )
         nerf_list.append(nerf_out)
-        dif_list.append(dif_out.permute(0, 2, 1))
+        # dif_list.append(dif_out.permute(0, 2, 1))
 
     nerf_out = torch.cat(nerf_list, dim=1)
-    dif_out = torch.cat(dif_list, dim=1)
-    return nerf_out, dif_out
+    # dif_out = torch.cat(dif_list, dim=1)
+    # return nerf_out, dif_out
+    return nerf_out, None
 
 
 def raw2outputs(raw, z_vals, rays_d, raw_noise_std=0.0):

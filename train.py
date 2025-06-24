@@ -132,7 +132,7 @@ class BasicTrainer(Trainer):
         cl = []
         for other_proj_num in range(self.eval_dset.n_views):
             coords = self.eval_dset.geo.project(
-                q, self.eval_dset.angles[other_proj_num]
+                q, self.eval_dset.ex_angles[other_proj_num]
             )
             # coords -> (-1, 1)
             coords = torch.tensor(

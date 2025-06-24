@@ -35,7 +35,6 @@ def fmt_loss_str(losses):
 
 class Trainer:
     def __init__(self, cfg, device="cuda"):
-
         # Args，从配置文件中导入各项参数
         self.global_step = 0
         self.conf = cfg
@@ -111,7 +110,7 @@ class Trainer:
             #    self.train_dset.projs_feats - self.train_dset.projs_feats.min()
             # ) / (self.train_dset.projs_feats.max() - self.train_dset.projs_feats.min())
             self.eval_dset.projs_feats = image_encoder(
-                self.eval_dset.projs.view(-1, 1, 256, 256)
+                self.eval_dset.ex_projs.view(-1, 1, 256, 256)
             )
             self.eval_dset.projs_feats = self.eval_dset.projs_feats.reshape(
                 1, *self.eval_dset.projs_feats.shape
@@ -228,7 +227,6 @@ class Trainer:
             pbar.update(self.epoch_start * iter_per_epoch)  # 更新进度条
 
         for idx_epoch in range(self.epoch_start, self.epochs + 1):
-
             # Evaluate
             self.idx_epoch = idx_epoch
             self.warmup()
